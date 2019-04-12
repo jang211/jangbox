@@ -1,6 +1,7 @@
 import webapp2
 from webapp2_extras import sessions
 import os
+import time
 import cloudstorage as gcs
 from google.appengine.ext.webapp import template
 from google.appengine.api import app_identity
@@ -48,7 +49,7 @@ class Test(webapp2.RequestHandler):
 		# 		gcs.delete(item)
 		# 	except gcs.NotFoundError:
 		# 		pass
-class Delete(webapp2.RequestHandler):
+class DelTest(webapp2.RequestHandler):
     def get(self):
         bucket = app_identity.get_default_gcs_bucket_name()
         items = []
@@ -116,7 +117,7 @@ class FileDownload(BaseHandler):
     root = str(self.session.get('root'))
 
     downfile = self.request.get('downfile')
-    downfilename = downfile[downfile.rindex('/')+1:]
+    downfilename = downfile[downfile.rindex('/') + 1:]
 
     self.response.headers['Content-Type'] = 'application/x-gzip'
     self.response.headers['Content-Disposition'] = 'attachment; filename=' + str(downfilename)
@@ -152,16 +153,21 @@ class Main(BaseHandler):
         folderitems = []
         fileitems = []
         if path != '':
-            folderitems.append('..')      # To show upper
+            folderitems.append({'name': '..', 'size': '', 'cdate': ''});      # To show upper
 
         for stat in stats:
             x = stat.filename[full_path_len + 1:]
             if x != '' and x.find('/') == -1:
-                fileitems.append(x)
+                size = stat.st_size
+                ctime = time.strftime("%Y-%m-%d", time.gmtime(stat.st_ctime))
+                fileitems.append({'name': x, 'size': stat.st_size, 'cdate': ctime})
             else:
                 x = x[:-1]
                 if x != '' and x.find('/') == -1:
-                    folderitems.append(x)
+                    size = stat.st_size
+                    ctime = time.strftime("%Y-%m-%d", time.gmtime(stat.st_ctime))
+                    # ctime = stat.st_ctime
+                    folderitems.append({'name': x, 'size': stat.st_size, 'cdate': ctime})
 
         # For breadcrumb
         nodes = []
@@ -302,55 +308,41 @@ class Logout(BaseHandler):
         self.session.clear()
         self.redirect('/login')
 
-class DeleteFolders(BaseHandler):
-    def post(self):
+class Delete(BaseHandler):
+    def get(self):
         bucket = os.environ.get('BUCKET_NAME', app_identity.get_default_gcs_bucket_name())
         root = str(self.session.get('root'))
+        path = self.request.get('path')
 
-        # List users
-        del_folder = self.request.get('del_folder_list')
-        dellist = del_folder.split(',')
+        full_path = '/' + bucket + '/' + root + '/' + path
+        try:
+            gcs.delete(full_path)
 
-        pos_del = dellist[0].rfind('/')
-        path = dellist[0][:pos_del]
+        except gcs.NotFoundError:
+            try:
+                gcs.delete(full_path + '/')
+            except gcs.NotFoundError:
+                pass
 
-        if del_folder == '':
-            self.redirect('')
-        else:
-            for index in range(len(dellist)):
-                items = []
-                if dellist[index][0] == '/':
-                    stats = gcs.listbucket('/' + bucket + '/' + root + dellist[index])
-                else:
-                    stats = gcs.listbucket('/' + bucket + '/' + root + '/' + dellist[index])
-                for stat in stats:
-                    items.append(stat.filename)
-                    self.response.write(stat.filename)
-                    self.response.write('</br>')
-                
-                for item in items:
-                    try:
-                        gcs.delete(item)
-                    except gcs.NotFoundError:
-                        pass
+            pass
 
-            self.redirect('/?path=' + path)
-        
+        upper = path[0:path.rindex('/')]
+        self.redirect('/?path=' + upper);
 
 config = {}
 config['webapp2_extras.sessions'] = {
     'secret_key': 'my_secret_key',
 }
 app = webapp2.WSGIApplication([
-    ('/', Main),
-    ('/signup', SignUp),
-    ('/login', Login),
-    ('/logout', Logout),
-    ('/test', Test),
-    ('/delet', Delete),
-    ('/download', FileDownload),
-    ('/upload', FileUpload),
-    ('/deletefolders', DeleteFolders),
+        ('/', Main),
+        ('/signup', SignUp),
+        ('/login', Login),
+        ('/logout', Logout),
+        ('/test', Test),
+        ('/delTest', DelTest),
+        ('/download', FileDownload),
+        ('/upload', FileUpload),
+        ('/delete', Delete),
     ],
     debug=True,
     config=config)
