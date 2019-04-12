@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ title }}</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+    <link rel="stylesheet" type="text/css" href="/static/css/signup.css">
+</head>
+<body>
+    <div class="container">
+        <h3 style="text-align: center">Sign Up</h3>
+        <div class="card card-container">
+            <img id="profile-img" class="profile-img-card" src="//ssl.gstatic.com/accounts/ui/avatar_2x.png" />
+            <p id="profile-name" class="profile-name-card"></p>
+            {% if errmsg != '' %}
+            <div class="alert alert-danger" >
+                <span>{{ errmsg }}</span>
+            </div>
+            {% endif %}
+            <form class="form-signin" action="/signup" method="post">
+                <span id="reauth-email" class="reauth-email"></span>
+                <input type="email" name="userEmail" class="form-control" placeholder="Email address" required>
+                <input type="password" name="userPassword" class="form-control" placeholder="Password" required>
+                <input type="password" name="confirmPassword" class="form-control" placeholder="Password Confirm" required>
+
+                <button class="btn btn-lg btn-primary btn-block btn-signin" type="submit">Register</button>
+            </form><!-- /form -->
+        </div><!-- /card-container -->
+    </div><!-- /container -->
+</body>
+</html>

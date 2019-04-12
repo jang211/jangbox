@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>{{ title }}</title>
+    <link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/main.css">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css" integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous">
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="container">
+            <div class="row d-flex align-items-center" style="margin-left: 100px">
+                <div class="col-md-9 ">
+                    <h2>Awesome DropBox</h2>
+                </div>
+                <div class="col-md-3">
+                    <a href="/logout" class="btn btn-info" role="button">Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row" style="padding-top: 10px">
+        <div class="col-md-2">
+        </div>
+        <div class="col-md-8">
+            <div class="card border-info mb-3">
+                <div class="card-header" style="text-align: center; font-size: 26px">Contents in Current Directory</div>
+                <div class="card-body card-size">
+                    <div class="card-title bc-icons-2">
+                      <nav aria-label="breadcrumb">
+                          <ol class="breadcrumb blue-grey lighten-4 breadcrumb-fontsize">
+                            <i class="fa fa-folder" style="margin-right: 10px; margin-top: 8px"></i>
+                            {% if not nodes %}
+                              /
+                            {% endif %}
+
+                            {% for node in nodes %}
+                                <li class="breadcrumb-item">
+                                  <a class="black-text" href="/?path={{ node.route }}">{{ node.name }}</a>
+                                  &nbsp;/&nbsp;
+                                </li>
+                            {% endfor %}
+                          </ol>
+                      </nav>
+                    </div>
+                    <div class="card-content">
+                        <ul style="list-style-type: none">
+                            {% for item in folderitems %}
+                            <li>
+                                <a href="javascript:gotoSub('{{ item }}');"  class="list-group-item list-group-item-action">
+                                    {% if item != '..'%}
+                                    <input type="checkbox" id="{{ item }}" name="{{ item }}" value="" >  
+                                    {% endif %}
+                                    {{ item }}
+                                </a>
+                            </li>
+                            {% endfor %}
+                            {% for item in fileitems %}
+                            <li>
+                                <a href=""  class="list-group-item list-group-item-action">
+                                    <input type="checkbox" id="{{ item }}" name="{{ item }}" value="" >  
+                                    {{ item }}
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <form action="/" method="post">
+                        <input type="hidden" name="path" value="{{ path }}">
+                        <input type="text" name="folder" class="form-control col-md-4" style="margin-left: 70px" placeholder="Folder Name" required>
+                        <div  class="row flex" style="padding-top: 10px; padding-left: 30px">
+                            <button type="submit" class="btn btn-outline-info col-sm-2 btn-padding" name="creatfolder" >Create Folder</button>
+                            <a class="btn btn-outline-info col-sm-2 btn-padding" href="javascript:pressDelBtn();" role="button">Delete Folder</a>
+                            <a class="btn btn-outline-info col-sm-2 btn-padding" href="javascript:pressUpBtn();" role="button">Upload File</a>
+                            <a class="btn btn-outline-info col-sm-2 btn-padding" href="javascript:pressDownBtn();" role="button">Download File</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        
+        function gotoSub(folder) {
+            var path = $('input[name=path]').val();
+            var url = '';
+
+            if (folder == '..') {
+            path = path.substring(0, path.lastIndexOf('/'));
+            url = '/?path=' + path;
+            }
+            else {
+            if (path == '')
+                url = '/?path=' + folder;
+            else
+                url = '/?path=' + path + '/' + folder;
+            }
+
+            location.href = url;
+        }
+
+        function pressUpBtn() {
+            var path = $('input[name=path]').val();
+            var url = '/upload?path=' + path;
+
+            location.href = url;
+        }
+
+        function pressDelBtn() {
+            var path = $('input[name=path]').val();
+
+            var delete_folders = [];
+            var checkboxs = $('input[type="checkbox"]');
+            checkboxs.each(function() {
+                if (this.checked) {
+                    delete_folders.push(this.id);
+                }
+            })
+
+            // console.log(delete_folders);
+            var delfn = [];
+            for (var i = 0; i < delete_folders.length; i++) {
+                delfn.push(path + '/' + delete_folders[i])
+            }
+
+            function redirect(url, data) {
+                var form = document.createElement('form');
+                document.body.appendChild(form);
+                form.method = 'post';
+                form.action = url;
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'del_folder_list';
+                input.value = data;
+                form.appendChild(input);
+                form.submit();
+            }
+
+            redirect('/deletefolders', delfn);
+        }
+
+        function pressDownBtn() {
+            var path = $('input[name=path]').val();
+
+            var down_files = [];
+            var checkboxs = $('input[type="checkbox"]');
+            checkboxs.each(function() {
+                if (this.checked) {
+                    down_files.push(this.id);
+                }
+            })
+
+            if (down_files.length > 1) {
+                alert("You can only one file for download");
+            } else if (down_files.length < 1) {
+                alert("No select file for download");
+            } else {
+                function redirect(url, data) {
+                    var form = document.createElement('form');
+                    document.body.appendChild(form);
+                    form.method = 'post';
+                    form.action = url;
+                    var input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'downfile';
+                    input.value = data;
+                    form.appendChild(input);
+                    form.submit();
+                }
+                pathdata = path + '/' + down_files[0];
+                redirect('/download', pathdata);
+            }
+        }
+    </script>
+</body>
+</html>
