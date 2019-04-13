@@ -5,8 +5,11 @@ import time
 import cloudstorage as gcs
 from google.appengine.ext.webapp import template
 from google.appengine.api import app_identity
+from google.appengine.ext import blobstore
+from google.appengine.ext.webapp import blobstore_handlers
 from models.user import User
-from google.appengine.api.files import file
+from models.file import File
+
 
 my_default_retry_params = gcs.RetryParams(initial_delay = 0.2,
                                           max_delay = 5.0,
@@ -110,23 +113,17 @@ class FileUpload(BaseHandler):
         create_file(file2Create)
         self.redirect('/?path=' + path)
 
-class FileDownload(BaseHandler):
+class FileDownload(blobstore_handlers.BlobstoreDownloadHandler):
 
-  def post(self):
-    bucket = os.environ.get('BUCKET_NAME', app_identity.get_default_gcs_bucket_name())
-    root = str(self.session.get('root'))
+    def get(self, file_key):
+        self.response.headers['Content-Type'] = 'application/x-gzip'
+        self.response.headers['Content-Disposition'] = 'attachment; filename=' + str(123)
 
-    downfile = self.request.get('downfile')
-    downfilename = downfile[downfile.rindex('/') + 1:]
+        if not blobstore.get(file_key):
+            self.error(404)
+        else:
+            self.send_blob(file_key)
 
-    self.response.headers['Content-Type'] = 'application/x-gzip'
-    self.response.headers['Content-Disposition'] = 'attachment; filename=' + str(downfilename)
-
-    filename = '/' + bucket + '/' + root + '/' + downfile
-    self.response.write(filename)
-    gcs_file = gcs.open(filename)
-    data = gcs_file.read()
-    gcs_file.close()
 
 class Main(BaseHandler):
     def get(self):
@@ -329,6 +326,45 @@ class Delete(BaseHandler):
         upper = path[0:path.rindex('/')]
         self.redirect('/?path=' + upper);
 
+class PhotoUploadFormHandler(webapp2.RequestHandler):
+    def get(self):
+        # [START upload_url]
+        upload_url = blobstore.create_upload_url('/upload_photo')
+        # [END upload_url]
+        # [START upload_form]
+        # To upload files to the blobstore, the request method must be "POST"
+        # and enctype must be set to "multipart/form-data".
+        self.response.out.write("""
+<html><body>
+<form action="{0}" method="POST" enctype="multipart/form-data">
+  Upload File: <input type="file" name="file"><br>
+  <input type="submit" name="submit" value="Submit">
+</form>
+</body></html>""".format(upload_url))
+        # [END upload_form]
+
+
+# [START upload_handler]
+class PhotoUploadHandler(blobstore_handlers.BlobstoreUploadHandler):
+    def post(self):
+        upload = self.get_uploads()[0]
+        user_photo = File(
+            user = 'users.get_current_user().user_id()',
+            blob_key = upload.key())
+        user_photo.put()
+
+        self.redirect('/view_photo/%s' % upload.key())
+# [END upload_handler]
+
+
+# [START download_handler]
+class ViewPhotoHandler(blobstore_handlers.BlobstoreDownloadHandler):
+    def get(self, photo_key):
+        if not blobstore.get(photo_key):
+            self.error(404)
+        else:
+            self.send_blob(photo_key)
+
 config = {}
 config['webapp2_extras.sessions'] = {
     'secret_key': 'my_secret_key',
@@ -340,9 +376,12 @@ app = webapp2.WSGIApplication([
         ('/logout', Logout),
         ('/test', Test),
         ('/delTest', DelTest),
-        ('/download', FileDownload),
+        ('/download/([^/]+)?', FileDownload),
         ('/upload', FileUpload),
         ('/delete', Delete),
+        ('/photo', PhotoUploadFormHandler),
+        ('/upload_photo', PhotoUploadHandler),
+        ('/view_photo/([^/]+)?', ViewPhotoHandler),
     ],
     debug=True,
     config=config)
