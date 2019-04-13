@@ -69,7 +69,7 @@
                                 ...
                               </button>
                               <div class="dropdown-menu">
-                                <a class="dropdown-item" href="javascript:delItem('{{ item.name }}')">Delete</a>
+                                <a class="dropdown-item" href="javascript:delFolder('{{ item.name }}')">Delete</a>
                               </div>
                             </div>
                             {% endif %}
@@ -98,7 +98,7 @@
                               </button>
                               <div class="dropdown-menu">
                                 <a class="dropdown-item" href="javascript:download('{{ item.name }}')">Download</a>
-                                <a class="dropdown-item" href="javascript:delItem('{{ item.name }}')">Delete</a>
+                                <a class="dropdown-item" href="javascript:delFile('{{ item.name }}')">Delete</a>
                               </div>
                             </div>
                             </td>
@@ -208,19 +208,35 @@
         location.href = url;
       }
 
-      function delItem(fname) {
+      function delFolder(folder) {
+        var path = $('input[name=path]').val();
+        var url = '';
+
+        if (folder == '..')
+          url = '/del_folder?path=' + path;
+        else {
+          if (path == '')
+              url = '/del_folder?path=' + folder;
+          else
+              url = '/del_folder?path=' + path + '/' + folder;
+        }
+
+        location.href = url;
+      }
+
+      function delFile(fname) {
         var path = $('input[name=path]').val();
         var url = '';
 
         if (fname == '..') {
           path = path.substring(0, path.lastIndexOf('/'));
-          url = '/delete?path=' + path;
+          url = '/delete_file?path=' + path;
         }
         else {
           if (path == '')
-              url = '/delete?path=' + fname;
+              url = '/delete_file?path=' + fname;
           else
-              url = '/delete?path=' + path + '/' + fname;
+              url = '/delete_file?path=' + path + '/' + fname;
         }
 
         location.href = url;

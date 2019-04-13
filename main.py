@@ -30,20 +30,25 @@ def create_folder(path, userkey):
     folder_key = folder.put()
 
 def listFolders(path, userkey):
-    paths = []
+    folders = []
+    if (path != userkey): # if root
+        folders.append({'name': '..', 'cdate': ''})
+
+    # Get list of folders from datastore
     qry = Folder.query(Folder.user_id == userkey)
     results = qry.fetch()
-    # for result in results:
-    #     rpath = result.path
-    #     if start = rpath.find(path) != -1:
-    #         rpath[start + len(path) + 1:]
-    #
-    #
-    #     pathname = result.path
-    #     if pathname.find(path) is not -1:
-    #         paths.append(result)
+    for result in results:
+        rpath = result.path
+        start = rpath.find(path)
+        if start != -1:
+            sub = rpath[start + len(path) + 1:]
+            if sub != '':
+                if sub.find('/') != -1:
+                    folders.append({'name': sub[:sub.rindex('/')], 'cdate': result.cdate})
+                else:
+                    folders.append({'name': sub, 'cdate': result.cdate})
 
-    return paths
+    return folders
 
 def listFiles(path):
     files = []
@@ -101,20 +106,6 @@ class Main(BaseHandler):
         # # List folder and files in the path
         folders = listFolders(full_path, root)
 
-        # self.response.write(folders)
-
-        full_path_len = len(full_path)
-
-        # Objects to list
-        folderitems = []
-        if path != '':
-            folderitems.append({'name': '..', 'size': '', 'cdate': ''});      # To show upper
-
-        for folder in folders:
-            x = folder.path[full_path_len:]
-            cdate = folder.cdate
-            folderitems.append({'name': x, 'size': '', 'cdate': cdate})
-
         # For breadcrumb
         nodes = []
         if path != '':
@@ -139,7 +130,7 @@ class Main(BaseHandler):
         template_values = {
             'title': 'DropBox',
             'nodes': nodes,
-            'folderitems': folderitems,
+            'folderitems': folders,
             'fileitems' : [],
             'path': path
         }
@@ -261,26 +252,27 @@ class Logout(BaseHandler):
         self.session.clear()
         self.redirect('/login')
 
-class Delete(BaseHandler):
+class DelFolder(BaseHandler):
     def get(self):
-        bucket = os.environ.get('BUCKET_NAME', app_identity.get_default_gcs_bucket_name())
-        root = str(self.session.get('root'))
+        root = self.session.get('root')
         path = self.request.get('path')
+        full_path = root + '/' + path
 
-        full_path = '/' + bucket + '/' + root + '/' + path
-        try:
-            gcs.delete(full_path)
+        # Delete folder from datastore
+        qry = Folder.query(Folder.path > full_path)
+        res = qry.fetch()
+        for r in res:
+            r.key.delete()
 
-        except gcs.NotFoundError:
-            try:
-                gcs.delete(full_path + '/')
-            except gcs.NotFoundError:
-                pass
+        self.response.write(res)
 
-            pass
+class DelFile(BaseHandler):
+    def get(self):
+        path = self.request.get('path')
+        # upper = path[0:path.rindex('/')]
 
-        upper = path[0:path.rindex('/')]
-        self.redirect('/?path=' + upper);
+        self.response.write(path)
+        # self.redirect('/?path=' + upper);
 
 class UploadURL(webapp2.RequestHandler):
     def get(self):
@@ -330,7 +322,8 @@ app = webapp2.WSGIApplication([
         ('/logout', Logout),
         ('/test', Test),
         ('/delTest', DelTest),
-        ('/delete', Delete),
+        ('/del_folder', DelFolder),
+        ('/del_file', DelFile),
         ('/uploadUrl', UploadURL),
         ('/upload', Upload),
         ('/download/([^/]+)?/([^/]+)?', FileDownload),
