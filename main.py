@@ -19,10 +19,6 @@ my_default_retry_params = gcs.RetryParams(initial_delay = 0.2,
                                           max_retry_period = 15)
 gcs.set_default_retry_params(my_default_retry_params)
 
-def duplicated(path):
-
-
-
 def create_folder(path, userkey):
     folder = Folder()
     folder.user_id = userkey
@@ -60,12 +56,11 @@ def listFiles(path):
 
 class Test(webapp2.RequestHandler):
     def get(self):
-        # qrye = Folder.query()
-        # results = qrye.fetch()
-        # for result in results:
-        #     self.response.write(result)
-        name = blobstore.BlobInfo(blobstore.BlobKey("AZ8xfWbbRKvMIiWCk6g9qw==")).creation.strftime("%m/%d/%Y %H:%M:%S")
-        self.response.write(name)
+        qrye = Folder.query(Folder.path < '200')
+        results = qrye.fetch()
+        for result in results:
+            self.response.write(result)
+
 
 class DelTest(webapp2.RequestHandler):
     def get(self):
