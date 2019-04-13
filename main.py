@@ -8,8 +8,13 @@ from google.appengine.api import app_identity
 from google.appengine.ext import blobstore
 from google.appengine.ext.webapp import blobstore_handlers
 from models.user import User
+<<<<<<< HEAD
 from models.file import File
 
+=======
+from models.folder import Folder
+from google.appengine.api.files import file
+>>>>>>> ef36a792ba7417654491fd06ce87e7d3d0e6b6ad
 
 my_default_retry_params = gcs.RetryParams(initial_delay = 0.2,
                                           max_delay = 5.0,
@@ -30,6 +35,16 @@ def create_file(filename):
 	gcs_file.write('abcde\n')
 	gcs_file.write('f'*1024*4 + '\n')
 	gcs_file.close()
+
+def listDirectory(path, userkey):
+    paths = []
+    qry = Folder.query(Folder.user_id == userkey)
+    results = qry.fetch()
+    path_len = len(path)
+    for result in results:
+        subpath = result.path[path_len:0]
+        paths.append(subpath)
+    return paths
 
 class Test(webapp2.RequestHandler):
 	def get(self):
@@ -135,67 +150,70 @@ class Main(BaseHandler):
         # Get parameter path
         path = self.request.get('path')
         # Get bucket name
-        bucket = os.environ.get('BUCKET_NAME', app_identity.get_default_gcs_bucket_name())
+        # bucket = os.environ.get('BUCKET_NAME', app_identity.get_default_gcs_bucket_name())
+
 
         if (path == ''):
-            full_path = '/' + bucket + '/' + root
+            full_path =  root
         else:
-            full_path = '/' + bucket + '/' + root + '/' + path
+            full_path =  root + '/' + path
 
-        full_path_len = len(full_path)
-        # List folder and files in the path
-        stats = gcs.listbucket(full_path)
+        stats = listDirectory(full_path, root)
+        self.response.write(stats)
+        # full_path_len = len(full_path)
+        # # List folder and files in the path
+        # stats = gcs.listbucket(full_path)
 
-        # Objects to list
-        folderitems = []
-        fileitems = []
-        if path != '':
-            folderitems.append({'name': '..', 'size': '', 'cdate': ''});      # To show upper
+        # # Objects to list
+        # folderitems = []
+        # fileitems = []
+        # if path != '':
+        #     folderitems.append({'name': '..', 'size': '', 'cdate': ''});      # To show upper
 
-        for stat in stats:
-            x = stat.filename[full_path_len + 1:]
-            if x != '' and x.find('/') == -1:
-                size = stat.st_size
-                ctime = time.strftime("%Y-%m-%d", time.gmtime(stat.st_ctime))
-                fileitems.append({'name': x, 'size': stat.st_size, 'cdate': ctime})
-            else:
-                x = x[:-1]
-                if x != '' and x.find('/') == -1:
-                    size = stat.st_size
-                    ctime = time.strftime("%Y-%m-%d", time.gmtime(stat.st_ctime))
-                    # ctime = stat.st_ctime
-                    folderitems.append({'name': x, 'size': stat.st_size, 'cdate': ctime})
+        # for stat in stats:
+        #     x = stat.filename[full_path_len + 1:]
+        #     if x != '' and x.find('/') == -1:
+        #         size = stat.st_size
+        #         ctime = time.strftime("%Y-%m-%d", time.gmtime(stat.st_ctime))
+        #         fileitems.append({'name': x, 'size': stat.st_size, 'cdate': ctime})
+        #     else:
+        #         x = x[:-1]
+        #         if x != '' and x.find('/') == -1:
+        #             size = stat.st_size
+        #             ctime = time.strftime("%Y-%m-%d", time.gmtime(stat.st_ctime))
+        #             # ctime = stat.st_ctime
+        #             folderitems.append({'name': x, 'size': stat.st_size, 'cdate': ctime})
 
-        # For breadcrumb
-        nodes = []
-        if path != '':
-            parts = path.split('/')
-            for i in range(len(parts)):
-                route = ''
-                for j in range(i):
-                    route += '/' + parts[j]
+        # # For breadcrumb
+        # nodes = []
+        # if path != '':
+        #     parts = path.split('/')
+        #     for i in range(len(parts)):
+        #         route = ''
+        #         for j in range(i):
+        #             route += '/' + parts[j]
 
-                route = route[1:]
-                if (route == ''):
-                    route += parts[i]
-                else:
-                    route += '/' + parts[i]
+        #         route = route[1:]
+        #         if (route == ''):
+        #             route += parts[i]
+        #         else:
+        #             route += '/' + parts[i]
 
-                name = parts[i]
-                nodes.append({'route': route, 'name': name})
+        #         name = parts[i]
+        #         nodes.append({'route': route, 'name': name})
 
-        # self.response.write(nodes)
+        # # self.response.write(nodes)
 
-        # Show home template with parameters
-        template_values = {
-            'title': 'DropBox',
-            'nodes': nodes,
-            'folderitems': folderitems,
-            'fileitems' : fileitems,
-            'path': path
-        }
-        path = os.path.join(os.path.dirname(__file__), "templates/home.html")
-        self.response.write(template.render(path, template_values))
+        # # Show home template with parameters
+        # template_values = {
+        #     'title': 'DropBox',
+        #     'nodes': nodes,
+        #     'folderitems': folderitems,
+        #     'fileitems' : fileitems,
+        #     'path': path
+        # }
+        # path = os.path.join(os.path.dirname(__file__), "templates/home.html")
+        # self.response.write(template.render(path, template_values))
 
     def post(self):
         folder = self.request.get('folder')
@@ -255,24 +273,32 @@ class SignUp(BaseHandler):
 				user_key = user.put()
 
 				# Create root object for user
-				self.createUserRoot(str(user_key.id()))
+
+				# self.createUserRoot(str(user_key.id()))
 
 				# Put session variable user as user's key
 				self.session['root'] = str(user_key.id())
 
+                folder = Folder()
+                folder.user_id = str(user_key.id())
+                folder.path = str(user_key.id())
+                folder_key = folder.put()
+
 				# Redirect to home
-				self.redirect('/')
+                self.redirect('/')
 
 	def checkUser(self, useremail):
 		qry = User.query(User.email == useremail)
 		results = qry.fetch()
 		return len(results)
 
-	def createUserRoot(self, root):
-		bucket_name = app_identity.get_default_gcs_bucket_name()
-
-		filename = '/' + bucket_name + '/' + root + '/'
-		create_file(filename)
+	# def createUserRoot(self, root):
+	# 	# bucket_name = app_identity.get_default_gcs_bucket_name()
+	# 	# filename = '/' + bucket_name + '/' + root + '/'
+ #        folder = Folder()
+ #        folder.user_id =
+ #        folder.path = root
+	# 	create_file(filename)
 
 class Login(BaseHandler):
     def get(self):
