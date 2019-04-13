@@ -33,6 +33,9 @@ def listDirectory(path, userkey):
     paths = []
     qry = Folder.query(Folder.user_id == userkey)
     results = qry.fetch()
+    for result in results:
+        pathname = result.path
+        if pathname.find(path)
     path_len = len(path)
     for result in results:
         subpath = result.path[path_len:0]
