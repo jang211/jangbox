@@ -48,11 +48,9 @@ def listFolders(path, userkey):
     return folders
 
 def listFiles(path):
-    files = []
-    qry = Files.query(File.path == path)
+    qry = File.query(File.path == path)
     results = qry.fetch()
-    # for result in results:
-
+    return results
 
 class Test(webapp2.RequestHandler):
     def get(self):
@@ -61,13 +59,12 @@ class Test(webapp2.RequestHandler):
         for result in results:
             self.response.write(result)
 
-
 class DelTest(webapp2.RequestHandler):
     def get(self):
         folder = Folder()
         folder.key.delete()
 
-class BaseHandler(webapp2.RequestHandler):              # taken from the webapp2 extrta session example
+class BaseHandler(blobstore_handlers.BlobstoreUploadHandler, webapp2.RequestHandler):
     def dispatch(self):                                 # override dispatch
         # Get a session store for this request.
         self.session_store = sessions.get_store(request=self.request)
@@ -102,6 +99,9 @@ class Main(BaseHandler):
         # # List folder and files in the path
         folders = listFolders(full_path, root)
 
+        # # List files in this folder
+        files = listFiles(full_path)
+
         # For breadcrumb
         nodes = []
         if path != '':
@@ -131,7 +131,7 @@ class Main(BaseHandler):
             'title': 'DropBox',
             'nodes': nodes,
             'folderitems': folders,
-            'fileitems' : [],
+            'fileitems' : files,
             'path': path,
             'errmsg': errmsg
         }
@@ -273,12 +273,20 @@ class DelFolder(BaseHandler):
         self.redirect('/?path=' + red_path)
 
 class DelFile(BaseHandler):
-    def get(self):
-        path = self.request.get('path')
-        # upper = path[0:path.rindex('/')]
+    def get(self, fpath, fname):
+        root = self.session.get('root')
+        full_path = root + '/' + fpath
 
-        self.response.write(path)
-        # self.redirect('/?path=' + upper);
+        # Delete from datastore
+        qry = File.query(File.path == full_path, File.name == fname)
+        res = qry.fetch()
+        res[0].key.delete()
+
+        # Delete from blobstore
+        blobstore.delete(res[0].blob_key)
+
+        self.redirect('/?path=' + fpath)
+
 
 class UploadURL(webapp2.RequestHandler):
     def get(self):
@@ -286,11 +294,17 @@ class UploadURL(webapp2.RequestHandler):
         self.response.out.write(upload_url)
 
 
-class Upload(blobstore_handlers.BlobstoreUploadHandler):
+class Upload(BaseHandler):
     def post(self):
         upload = self.get_uploads()[0]
+
         # Path
-        fpath = self.request.POST.get('path')
+        root = self.session.get('root')
+        path = self.request.POST.get('path')
+        if path != '':
+            fpath = root + '/' + path
+        else:
+            fpath = root
         fname = upload.filename;
         fsize = blobstore.BlobInfo(upload.key()).size
         fdate = blobstore.BlobInfo(upload.key()).creation
@@ -298,6 +312,7 @@ class Upload(blobstore_handlers.BlobstoreUploadHandler):
 
         file = File(
             name = fname,
+            path = fpath,
             blob_key = upload.key(),
             size = str(fsize),
             cdate = str(fdate.strftime("%m/%d/%Y %H:%M:%S"))
@@ -305,7 +320,7 @@ class Upload(blobstore_handlers.BlobstoreUploadHandler):
         file.put()
 
         # self.response.write(upload.filename)
-        # self.redirect('/download/%s/%s' % (upload.key(), path))
+        self.redirect('/?path=' + path)
 
 class FileDownload(blobstore_handlers.BlobstoreDownloadHandler):
     def get(self, file_key, file_name):
@@ -328,7 +343,7 @@ app = webapp2.WSGIApplication([
         ('/logout', Logout),
         ('/test', Test),
         ('/del_folder', DelFolder),
-        ('/del_file', DelFile),
+        ('/del_file/([^/]+)?/([^/]+)?', DelFile),
         ('/uploadUrl', UploadURL),
         ('/upload', Upload),
         ('/download/([^/]+)?/([^/]+)?', FileDownload),
