@@ -68,10 +68,14 @@ content: none; }
 color: #455a64; }
 
 .breadcrumb-fontsize {
-    font-size: 24px;
+    font-size: 18px;
 }
 
 .btn-padding {
     margin-left: 30px;
     margin-right: 40px
+}
+
+td.right {
+  text-align: right;
 }

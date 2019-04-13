@@ -5,7 +5,9 @@
     <link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
     <link rel="stylesheet" type="text/css" href="/static/css/main.css">
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css" integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous">
+
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script type="text/javascript" src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
     <div class="top-bar">
@@ -25,7 +27,6 @@
         </div>
         <div class="col-md-8">
             <div class="card border-info mb-3">
-                <div class="card-header" style="text-align: center; font-size: 26px">Contents in Current Directory</div>
                 <div class="card-body card-size">
                     <div class="card-title bc-icons-2">
                       <nav aria-label="breadcrumb">
@@ -45,137 +46,220 @@
                       </nav>
                     </div>
                     <div class="card-content">
-                        <ul style="list-style-type: none">
-                            {% for item in folderitems %}
-                            <li>
-                                <a href="javascript:gotoSub('{{ item }}');"  class="list-group-item list-group-item-action">
-                                    {% if item != '..'%}
-                                    <input type="checkbox" id="{{ item }}" name="{{ item }}" value="" >  
-                                    {% endif %}
-                                    {{ item }}
-                                </a>
-                            </li>
-                            {% endfor %}
-                            {% for item in fileitems %}
-                            <li>
-                                <a href=""  class="list-group-item list-group-item-action">
-                                    <input type="checkbox" id="{{ item }}" name="{{ item }}" value="" >  
-                                    {{ item }}
-                                </a>
-                            </li>
-                            {% endfor %}
-                        </ul>
+                      <table>
+                        {% for item in folderitems %}
+                          <tr>
+                          <td width="5%">
+                            {% if item.name != '..'%}
+                              <i class="fa fa-folder" style="margin-right: 10px; margin-top: 8px"></i>
+                            {% endif %}
+                          </td>
+                          <td width="74%">
+                            <a href="javascript:gotoSub('{{ item.name}}');"  class="">
+                              {{ item.name }}
+                            </a>
+                          </td>
+                          <td width="3%" class="right"></td>
+                          <td width="10%" class="right">{{ item.cdate }}</td>
+                          <td width="8%" class="right">
+                            {% if item.name != '..'%}
+                            <div class="dropdown">
+                              <button type="button" class="btn btn-secondary btn-sm dropdown-toggle-split" data-toggle="dropdown">
+                                ...
+                              </button>
+                              <div class="dropdown-menu">
+                                <a class="dropdown-item" href="javascript:download({{ item.name }})">Download</a>
+                                <a class="dropdown-item" href="javascript:delItem('{{ item.name }}')">Delete</a>
+                              </div>
+                            </div>
+                            {% endif %}
+                          </td>
+                        </tr>
+                        {% endfor %}
+
+                        {% for item in fileitems %}
+                          <tr>
+                            <td>
+                              {% if item.name != '..'%}
+                                <i class="fa fa-file" style="margin-right: 10px; margin-top: 8px"></i>
+                              {% endif %}
+                            </td>
+                            <td>
+                              <a href="javascript:gotoSub('{{ item.name }}');"  class="list-group-item list-group-item-action">
+                                {{ item.name }}
+                              </a>
+                            </td>
+                            <td width="3%" class="right">{{ item.size }}</td>
+                            <td width="13%" class="right">{{ item.cdate }}</td>
+                            <td>
+                              <div class="dropdown">
+                              <button type="button" class="btn btn-secondary btn-sm dropdown-toggle-split" data-toggle="dropdown">
+                                ...
+                              </button>
+                              <div class="dropdown-menu">
+                                <a class="dropdown-item" href="javascript:download({{ item.name }})">Download</a>
+                                <a class="dropdown-item" href="javascript:delItem('{{ item.name }}')">Delete</a>
+                              </div>
+                            </div>
+                            </td>
+                          </tr>
+                        {% endfor %}
+                      </table>
+
 
                     </div>
                 </div>
                 <div class="card-footer">
-                    <form action="/" method="post">
-                        <input type="hidden" name="path" value="{{ path }}">
-                        <input type="text" name="folder" class="form-control col-md-4" style="margin-left: 70px" placeholder="Folder Name" required>
-                        <div  class="row flex" style="padding-top: 10px; padding-left: 30px">
-                            <button type="submit" class="btn btn-outline-info col-sm-2 btn-padding" name="creatfolder" >Create Folder</button>
-                            <a class="btn btn-outline-info col-sm-2 btn-padding" href="javascript:pressDelBtn();" role="button">Delete Folder</a>
-                            <a class="btn btn-outline-info col-sm-2 btn-padding" href="javascript:pressUpBtn();" role="button">Upload File</a>
-                            <a class="btn btn-outline-info col-sm-2 btn-padding" href="javascript:pressDownBtn();" role="button">Download File</a>
+
+                        <button class="btn btn-outline-info col-sm-2 btn-padding" name="creatfolder"  data-toggle="modal" data-target="#myModal">New folder</button>
+                        <a class="btn btn-outline-info col-sm-2 btn-padding" href="javascript:pressUpBtn();" role="button">Upload file</a>
+
+
+                </div>
+
+                <!-- The Modal -->
+                <div class="modal" id="myModal">
+                  <div class="modal-dialog">
+                    <div class="modal-content">
+                      <form action="/" class="form" method="POST">
+                        <!-- Modal Header -->
+                        <div class="modal-header">
+                            <h4 class="modal-title">Create new folder</h4>
+                            <button type="button" class="close" data-dismiss="modal">&times;</button>
                         </div>
-                    </form>
+
+                        <!-- Modal body -->
+                        <div class="modal-body">
+                          <input type="hidden" name="path" value="{{ path }}">
+                          <input type="text" class="form-control" name="folder" placeholder="Folder name" required>
+                        </div>
+
+                        <!-- Modal footer -->
+                        <div class="modal-footer">
+                          <button type="button" class="btn btn-success" data-dismiss="modal" onclick="onCreate();">Create</button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script type="text/javascript">
-        
-        function gotoSub(folder) {
-            var path = $('input[name=path]').val();
-            var url = '';
+      function onCreate() {
+        if ($('input[name=folder]').val() != '')
+          document.forms[0].submit();
+      }
 
-            if (folder == '..') {
-            path = path.substring(0, path.lastIndexOf('/'));
-            url = '/?path=' + path;
-            }
-            else {
-            if (path == '')
-                url = '/?path=' + folder;
-            else
-                url = '/?path=' + path + '/' + folder;
-            }
+      function gotoSub(folder) {
+        var path = $('input[name=path]').val();
+        var url = '';
 
-            location.href = url;
+        if (folder == '..') {
+          path = path.substring(0, path.lastIndexOf('/'));
+          url = '/?path=' + path;
+        }
+        else {
+          if (path == '')
+              url = '/?path=' + folder;
+          else
+              url = '/?path=' + path + '/' + folder;
         }
 
-        function pressUpBtn() {
-            var path = $('input[name=path]').val();
-            var url = '/upload?path=' + path;
+        location.href = url;
+      }
 
-            location.href = url;
+      function delItem(fname) {
+        var path = $('input[name=path]').val();
+        var url = '';
+
+        if (fname == '..') {
+          path = path.substring(0, path.lastIndexOf('/'));
+          url = '/delete?path=' + path;
+        }
+        else {
+          if (path == '')
+              url = '/delete?path=' + fname;
+          else
+              url = '/delete?path=' + path + '/' + fname;
         }
 
-        function pressDelBtn() {
-            var path = $('input[name=path]').val();
+        location.href = url;
+      }
 
-            var delete_folders = [];
-            var checkboxs = $('input[type="checkbox"]');
-            checkboxs.each(function() {
-                if (this.checked) {
-                    delete_folders.push(this.id);
-                }
-            })
+      function pressUpBtn() {
+          var path = $('input[name=path]').val();
+          var url = '/upload?path=' + path;
 
-            // console.log(delete_folders);
-            var delfn = [];
-            for (var i = 0; i < delete_folders.length; i++) {
-                delfn.push(path + '/' + delete_folders[i])
-            }
+          location.href = url;
+      }
 
-            function redirect(url, data) {
-                var form = document.createElement('form');
-                document.body.appendChild(form);
-                form.method = 'post';
-                form.action = url;
-                var input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'del_folder_list';
-                input.value = data;
-                form.appendChild(input);
-                form.submit();
-            }
+      function pressDelBtn() {
+          var path = $('input[name=path]').val();
 
-            redirect('/deletefolders', delfn);
-        }
+          var delete_folders = [];
+          var checkboxs = $('input[type="checkbox"]');
+          checkboxs.each(function() {
+              if (this.checked) {
+                  delete_folders.push(this.id);
+              }
+          })
 
-        function pressDownBtn() {
-            var path = $('input[name=path]').val();
+          // console.log(delete_folders);
+          var delfn = [];
+          for (var i = 0; i < delete_folders.length; i++) {
+              delfn.push(path + '/' + delete_folders[i])
+          }
 
-            var down_files = [];
-            var checkboxs = $('input[type="checkbox"]');
-            checkboxs.each(function() {
-                if (this.checked) {
-                    down_files.push(this.id);
-                }
-            })
+          function redirect(url, data) {
+              var form = document.createElement('form');
+              document.body.appendChild(form);
+              form.method = 'post';
+              form.action = url;
+              var input = document.createElement('input');
+              input.type = 'hidden';
+              input.name = 'del_folder_list';
+              input.value = data;
+              form.appendChild(input);
+              form.submit();
+          }
 
-            if (down_files.length > 1) {
-                alert("You can only one file for download");
-            } else if (down_files.length < 1) {
-                alert("No select file for download");
-            } else {
-                function redirect(url, data) {
-                    var form = document.createElement('form');
-                    document.body.appendChild(form);
-                    form.method = 'post';
-                    form.action = url;
-                    var input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'downfile';
-                    input.value = data;
-                    form.appendChild(input);
-                    form.submit();
-                }
-                pathdata = path + '/' + down_files[0];
-                redirect('/download', pathdata);
-            }
-        }
+          redirect('/deletefolders', delfn);
+      }
+
+      function pressDownBtn() {
+          var path = $('input[name=path]').val();
+
+          var down_files = [];
+          var checkboxs = $('input[type="checkbox"]');
+          checkboxs.each(function() {
+              if (this.checked) {
+                  down_files.push(this.id);
+              }
+          })
+
+          if (down_files.length > 1) {
+              alert("You can only one file for download");
+          } else if (down_files.length < 1) {
+              alert("No select file for download");
+          } else {
+              function redirect(url, data) {
+                  var form = document.createElement('form');
+                  document.body.appendChild(form);
+                  form.method = 'post';
+                  form.action = url;
+                  var input = document.createElement('input');
+                  input.type = 'hidden';
+                  input.name = 'downfile';
+                  input.value = data;
+                  form.appendChild(input);
+                  form.submit();
+              }
+              pathdata = path + '/' + down_files[0];
+              redirect('/download', pathdata);
+          }
+      }
     </script>
 </body>
 </html>
