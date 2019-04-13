@@ -58,7 +58,7 @@ class Test(webapp2.RequestHandler):
         # results = qrye.fetch()
         # for result in results:
         #     self.response.write(result)
-        name = blobstore.BlobInfo("AZ8xfWbbRKvMIiWCk6g9qw==")
+        name = blobstore.BlobInfo(blobstore.BlobKey("AZ8xfWbbRKvMIiWCk6g9qw==")).creation.strftime("%m/%d/%Y %H:%M:%S")
         self.response.write(name)
 
 class DelTest(webapp2.RequestHandler):
@@ -294,12 +294,16 @@ class Upload(blobstore_handlers.BlobstoreUploadHandler):
         # Path
         fpath = self.request.POST.get('path')
         fname = upload.filename;
-
+        fsize = blobstore.BlobInfo(upload.key()).size
+        fdate = blobstore.BlobInfo(upload.key()).creation
         # Get file info from blobinfo
 
         file = File(
             name = fname,
-            blob_key = upload.key())
+            blob_key = upload.key(),
+            size = str(fsize),
+            cdate = str(fdate.strftime("%m/%d/%Y %H:%M:%S"))
+        )
         file.put()
 
         # self.response.write(upload.filename)
