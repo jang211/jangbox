@@ -8,13 +8,8 @@ from google.appengine.api import app_identity
 from google.appengine.ext import blobstore
 from google.appengine.ext.webapp import blobstore_handlers
 from models.user import User
-<<<<<<< HEAD
 from models.file import File
-
-=======
 from models.folder import Folder
-from google.appengine.api.files import file
->>>>>>> ef36a792ba7417654491fd06ce87e7d3d0e6b6ad
 
 my_default_retry_params = gcs.RetryParams(initial_delay = 0.2,
                                           max_delay = 5.0,
@@ -101,45 +96,6 @@ class BaseHandler(webapp2.RequestHandler):              # taken from the webapp2
         # Returns a session using the default cookie key.
         return self.session_store.get_session()
 
-class FileUpload(BaseHandler):
-    def get(self):
-        uploadpath = self.request.get('path')
-        template_values = {
-            'title': 'DropBox',
-            'path' : uploadpath,
-        }
-        path = os.path.join(os.path.dirname(__file__), "templates/upload.html")
-        self.response.write(template.render(path, template_values))
-
-    def post(self):
-        path = self.request.get('path')
-
-        uploaded_file = self.request.POST.get("infile")
-        content = uploaded_file.file.read()
-        filename = uploaded_file.filename
-        filetype = uploaded_file.type
-
-        bucket_name = os.environ.get('BUCKET_NAME', app_identity.get_default_gcs_bucket_name())
-        root = str(self.session.get('root'))
-        if path == '':
-            file2Create = '/' + bucket_name + '/' + root + '/' + filename
-        else:
-            file2Create = '/' + bucket_name + '/' + root + '/' + path +'/' + filename
-        create_file(file2Create)
-        self.redirect('/?path=' + path)
-
-class FileDownload(blobstore_handlers.BlobstoreDownloadHandler):
-
-    def get(self, file_key):
-        self.response.headers['Content-Type'] = 'application/x-gzip'
-        self.response.headers['Content-Disposition'] = 'attachment; filename=' + str(123)
-
-        if not blobstore.get(file_key):
-            self.error(404)
-        else:
-            self.send_blob(file_key)
-
-
 class Main(BaseHandler):
     def get(self):
         # Get user's root
@@ -150,70 +106,70 @@ class Main(BaseHandler):
         # Get parameter path
         path = self.request.get('path')
         # Get bucket name
-        # bucket = os.environ.get('BUCKET_NAME', app_identity.get_default_gcs_bucket_name())
+        bucket = os.environ.get('BUCKET_NAME', app_identity.get_default_gcs_bucket_name())
 
 
         if (path == ''):
-            full_path =  root
+            full_path =  '/' + bucket + '/' + root
         else:
-            full_path =  root + '/' + path
+            full_path =  '/' + bucket + '/' + root + '/' + path
 
-        stats = listDirectory(full_path, root)
-        self.response.write(stats)
-        # full_path_len = len(full_path)
-        # # List folder and files in the path
-        # stats = gcs.listbucket(full_path)
+        # stats = listDirectory(full_path, root)
+        # self.response.write(stats)
+        full_path_len = len(full_path)
+        # List folder and files in the path
+        stats = gcs.listbucket(full_path)
 
-        # # Objects to list
-        # folderitems = []
-        # fileitems = []
-        # if path != '':
-        #     folderitems.append({'name': '..', 'size': '', 'cdate': ''});      # To show upper
+        # Objects to list
+        folderitems = []
+        fileitems = []
+        if path != '':
+            folderitems.append({'name': '..', 'size': '', 'cdate': ''});      # To show upper
 
-        # for stat in stats:
-        #     x = stat.filename[full_path_len + 1:]
-        #     if x != '' and x.find('/') == -1:
-        #         size = stat.st_size
-        #         ctime = time.strftime("%Y-%m-%d", time.gmtime(stat.st_ctime))
-        #         fileitems.append({'name': x, 'size': stat.st_size, 'cdate': ctime})
-        #     else:
-        #         x = x[:-1]
-        #         if x != '' and x.find('/') == -1:
-        #             size = stat.st_size
-        #             ctime = time.strftime("%Y-%m-%d", time.gmtime(stat.st_ctime))
-        #             # ctime = stat.st_ctime
-        #             folderitems.append({'name': x, 'size': stat.st_size, 'cdate': ctime})
+        for stat in stats:
+            x = stat.filename[full_path_len + 1:]
+            if x != '' and x.find('/') == -1:
+                size = stat.st_size
+                ctime = time.strftime("%Y-%m-%d", time.gmtime(stat.st_ctime))
+                fileitems.append({'name': x, 'size': stat.st_size, 'cdate': ctime})
+            else:
+                x = x[:-1]
+                if x != '' and x.find('/') == -1:
+                    size = stat.st_size
+                    ctime = time.strftime("%Y-%m-%d", time.gmtime(stat.st_ctime))
+                    # ctime = stat.st_ctime
+                    folderitems.append({'name': x, 'size': stat.st_size, 'cdate': ctime})
 
-        # # For breadcrumb
-        # nodes = []
-        # if path != '':
-        #     parts = path.split('/')
-        #     for i in range(len(parts)):
-        #         route = ''
-        #         for j in range(i):
-        #             route += '/' + parts[j]
+        # For breadcrumb
+        nodes = []
+        if path != '':
+            parts = path.split('/')
+            for i in range(len(parts)):
+                route = ''
+                for j in range(i):
+                    route += '/' + parts[j]
 
-        #         route = route[1:]
-        #         if (route == ''):
-        #             route += parts[i]
-        #         else:
-        #             route += '/' + parts[i]
+                route = route[1:]
+                if (route == ''):
+                    route += parts[i]
+                else:
+                    route += '/' + parts[i]
 
-        #         name = parts[i]
-        #         nodes.append({'route': route, 'name': name})
+                name = parts[i]
+                nodes.append({'route': route, 'name': name})
 
-        # # self.response.write(nodes)
+        # self.response.write(nodes)
 
-        # # Show home template with parameters
-        # template_values = {
-        #     'title': 'DropBox',
-        #     'nodes': nodes,
-        #     'folderitems': folderitems,
-        #     'fileitems' : fileitems,
-        #     'path': path
-        # }
-        # path = os.path.join(os.path.dirname(__file__), "templates/home.html")
-        # self.response.write(template.render(path, template_values))
+        # Show home template with parameters
+        template_values = {
+            'title': 'DropBox',
+            'nodes': nodes,
+            'folderitems': folderitems,
+            'fileitems' : fileitems,
+            'path': path
+        }
+        path = os.path.join(os.path.dirname(__file__), "templates/home.html")
+        self.response.write(template.render(path, template_values))
 
     def post(self):
         folder = self.request.get('folder')
@@ -352,44 +308,26 @@ class Delete(BaseHandler):
         upper = path[0:path.rindex('/')]
         self.redirect('/?path=' + upper);
 
-class PhotoUploadFormHandler(webapp2.RequestHandler):
+class UploadURL(webapp2.RequestHandler):
     def get(self):
-        # [START upload_url]
-        upload_url = blobstore.create_upload_url('/upload_photo')
-        # [END upload_url]
-        # [START upload_form]
-        # To upload files to the blobstore, the request method must be "POST"
-        # and enctype must be set to "multipart/form-data".
-        self.response.out.write("""
-<html><body>
-<form action="{0}" method="POST" enctype="multipart/form-data">
-  Upload File: <input type="file" name="file"><br>
-  <input type="submit" name="submit" value="Submit">
-</form>
-</body></html>""".format(upload_url))
-        # [END upload_form]
+        upload_url = blobstore.create_upload_url('/upload')
+        self.response.out.write(upload_url)
 
 
-# [START upload_handler]
-class PhotoUploadHandler(blobstore_handlers.BlobstoreUploadHandler):
+class Upload(blobstore_handlers.BlobstoreUploadHandler):
     def post(self):
         upload = self.get_uploads()[0]
-        user_photo = File(
-            user = 'users.get_current_user().user_id()',
+        # Path
+        fpath = self.request.POST.get('path')
+        fname = upload.filename;
+
+        file = File(
+            name = fname,
             blob_key = upload.key())
-        user_photo.put()
+        file.put()
 
-        self.redirect('/view_photo/%s' % upload.key())
-# [END upload_handler]
-
-
-# [START download_handler]
-class ViewPhotoHandler(blobstore_handlers.BlobstoreDownloadHandler):
-    def get(self, photo_key):
-        if not blobstore.get(photo_key):
-            self.error(404)
-        else:
-            self.send_blob(photo_key)
+        # self.response.write(upload.filename)
+        # self.redirect('/download/%s/%s' % (upload.key(), path))
 
 config = {}
 config['webapp2_extras.sessions'] = {
@@ -402,12 +340,10 @@ app = webapp2.WSGIApplication([
         ('/logout', Logout),
         ('/test', Test),
         ('/delTest', DelTest),
-        ('/download/([^/]+)?', FileDownload),
-        ('/upload', FileUpload),
+        ('/download/([^/]+)?/([^/]+)?', FileDownload),
+        ('/uploadUrl', UploadURL),
         ('/delete', Delete),
-        ('/photo', PhotoUploadFormHandler),
-        ('/upload_photo', PhotoUploadHandler),
-        ('/view_photo/([^/]+)?', ViewPhotoHandler),
+        ('/upload', Upload),
     ],
     debug=True,
     config=config)
