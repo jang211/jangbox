@@ -220,14 +220,14 @@
         var path = $('input[name=path]').val();
         var url = '';
 
-        if (folder == '..')
-          url = '/del_folder?path=' + path;
-        else {
+        // if (folder == '..')
+        //   url = '/del_folder?path=' + path;
+        // else {
           if (path == '')
               url = '/del_folder?path=' + folder;
           else
               url = '/del_folder?path=' + path + '/' + folder;
-        }
+        // }
 
         location.href = url;
       }
@@ -250,78 +250,78 @@
         location.href = url;
       }
 
-      function pressUpBtn() {
-          var path = $('input[name=path]').val();
-          var url = '/upload?path=' + path;
+      // function pressUpBtn() {
+      //     var path = $('input[name=path]').val();
+      //     var url = '/upload?path=' + path;
 
-          location.href = url;
-      }
+      //     location.href = url;
+      // }
 
-      function pressDelBtn() {
-          var path = $('input[name=path]').val();
+      // function pressDelBtn() {
+      //     var path = $('input[name=path]').val();
 
-          var delete_folders = [];
-          var checkboxs = $('input[type="checkbox"]');
-          checkboxs.each(function() {
-              if (this.checked) {
-                  delete_folders.push(this.id);
-              }
-          })
+      //     var delete_folders = [];
+      //     var checkboxs = $('input[type="checkbox"]');
+      //     checkboxs.each(function() {
+      //         if (this.checked) {
+      //             delete_folders.push(this.id);
+      //         }
+      //     })
 
-          // console.log(delete_folders);
-          var delfn = [];
-          for (var i = 0; i < delete_folders.length; i++) {
-              delfn.push(path + '/' + delete_folders[i])
-          }
+      //     // console.log(delete_folders);
+      //     var delfn = [];
+      //     for (var i = 0; i < delete_folders.length; i++) {
+      //         delfn.push(path + '/' + delete_folders[i])
+      //     }
 
-          function redirect(url, data) {
-              var form = document.createElement('form');
-              document.body.appendChild(form);
-              form.method = 'post';
-              form.action = url;
-              var input = document.createElement('input');
-              input.type = 'hidden';
-              input.name = 'del_folder_list';
-              input.value = data;
-              form.appendChild(input);
-              form.submit();
-          }
+      //     function redirect(url, data) {
+      //         var form = document.createElement('form');
+      //         document.body.appendChild(form);
+      //         form.method = 'post';
+      //         form.action = url;
+      //         var input = document.createElement('input');
+      //         input.type = 'hidden';
+      //         input.name = 'del_folder_list';
+      //         input.value = data;
+      //         form.appendChild(input);
+      //         form.submit();
+      //     }
 
-          redirect('/deletefolders', delfn);
-      }
+      //     redirect('/deletefolders', delfn);
+      // }
 
-      function pressDownBtn() {
-          var path = $('input[name=path]').val();
+      // function pressDownBtn() {
+      //     var path = $('input[name=path]').val();
 
-          var down_files = [];
-          var checkboxs = $('input[type="checkbox"]');
-          checkboxs.each(function() {
-              if (this.checked) {
-                  down_files.push(this.id);
-              }
-          })
+      //     var down_files = [];
+      //     var checkboxs = $('input[type="checkbox"]');
+      //     checkboxs.each(function() {
+      //         if (this.checked) {
+      //             down_files.push(this.id);
+      //         }
+      //     })
 
-          if (down_files.length > 1) {
-              alert("You can only one file for download");
-          } else if (down_files.length < 1) {
-              alert("No select file for download");
-          } else {
-              function redirect(url, data) {
-                  var form = document.createElement('form');
-                  document.body.appendChild(form);
-                  form.method = 'post';
-                  form.action = url;
-                  var input = document.createElement('input');
-                  input.type = 'hidden';
-                  input.name = 'downfile';
-                  input.value = data;
-                  form.appendChild(input);
-                  form.submit();
-              }
-              pathdata = path + '/' + down_files[0];
-              redirect('/download', pathdata);
-          }
-      }
+      //     if (down_files.length > 1) {
+      //         alert("You can only one file for download");
+      //     } else if (down_files.length < 1) {
+      //         alert("No select file for download");
+      //     } else {
+      //         function redirect(url, data) {
+      //             var form = document.createElement('form');
+      //             document.body.appendChild(form);
+      //             form.method = 'post';
+      //             form.action = url;
+      //             var input = document.createElement('input');
+      //             input.type = 'hidden';
+      //             input.name = 'downfile';
+      //             input.value = data;
+      //             form.appendChild(input);
+      //             form.submit();
+      //         }
+      //         pathdata = path + '/' + down_files[0];
+      //         redirect('/download', pathdata);
+      //     }
+      // }
     </script>
 </body>
 </html>

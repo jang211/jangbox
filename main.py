@@ -144,11 +144,11 @@ class Main(BaseHandler):
         root = str(self.session.get('root'))
 
         if (path == ''):     # If in root
-            full_path = root + '/' + folder    # Trailing / means folder
+            full_path = root + '/' + folder
         else:
-            full_path = root + '/' + path + '/' + folder   # Trailing / means folder
+            full_path = root + '/' + path + '/' + folder
 
-        if duplicated():
+        if duplicated(full_path):
             self.redirect('/?path=' + path + '&err=fdup')
         else:
             # Create the folder
@@ -216,14 +216,6 @@ class SignUp(BaseHandler):
 		results = qry.fetch()
 		return len(results)
 
-	# def createUserRoot(self, root):
-	# 	# bucket_name = app_identity.get_default_gcs_bucket_name()
-	# 	# filename = '/' + bucket_name + '/' + root + '/'
- #        folder = Folder()
- #        folder.user_id =
- #        folder.path = root
-	# 	create_file(filename)
-
 class Login(BaseHandler):
     def get(self):
         template_values = {
@@ -259,15 +251,26 @@ class DelFolder(BaseHandler):
     def get(self):
         root = self.session.get('root')
         path = self.request.get('path')
+
         full_path = root + '/' + path
 
-        # Delete folder from datastore
-        qry = Folder.query(Folder.path > full_path)
-        res = qry.fetch()
-        for r in res:
-            r.key.delete()
+        # Delete folder from datastore. Query condition means it contain sub directory.
+        qry = Folder.query(Folder.path >= full_path)
+        results = qry.fetch()
 
-        self.response.write(res)
+        # Query result is not correct, because of condition for querying. So fix them.
+        for result in results:
+            result_path = result.path
+            if result_path.find(path) is not -1:
+                result.key.delete()
+
+        # After deleting, make directory for redirecting.
+        if path.find('/') is not -1:
+            red_path = path[:path.rindex('/')]
+        else:
+            red_path = ''
+
+        self.redirect('/?path=' + red_path)
 
 class DelFile(BaseHandler):
     def get(self):
@@ -324,7 +327,6 @@ app = webapp2.WSGIApplication([
         ('/login', Login),
         ('/logout', Logout),
         ('/test', Test),
-        ('/delTest', DelTest),
         ('/del_folder', DelFolder),
         ('/del_file', DelFile),
         ('/uploadUrl', UploadURL),
