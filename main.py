@@ -19,6 +19,9 @@ my_default_retry_params = gcs.RetryParams(initial_delay = 0.2,
                                           max_retry_period = 15)
 gcs.set_default_retry_params(my_default_retry_params)
 
+def duplicated(path):
+
+
 
 def create_folder(path, userkey):
     folder = Folder()
@@ -43,9 +46,7 @@ def listFolders(path, userkey):
         if start != -1:
             sub = rpath[start + len(path) + 1:]
             if sub != '':
-                if sub.find('/') != -1:
-                    folders.append({'name': sub[:sub.rindex('/')], 'cdate': result.cdate})
-                else:
+                if sub.find('/') == -1:
                     folders.append({'name': sub, 'cdate': result.cdate})
 
     return folders
@@ -124,7 +125,11 @@ class Main(BaseHandler):
                 name = parts[i]
                 nodes.append({'route': route, 'name': name})
 
-        # # self.response.write(nodes)
+        # Find error messages
+        error = self.request.get('err')
+        errmsg = ''
+        if error == 'fdup':
+            errmsg = 'Folder already exists.'
 
         # Show home template with parameters
         template_values = {
@@ -132,7 +137,8 @@ class Main(BaseHandler):
             'nodes': nodes,
             'folderitems': folders,
             'fileitems' : [],
-            'path': path
+            'path': path,
+            'errmsg': errmsg
         }
         path = os.path.join(os.path.dirname(__file__), "templates/home.html")
         self.response.write(template.render(path, template_values))
@@ -147,10 +153,12 @@ class Main(BaseHandler):
         else:
             full_path = root + '/' + path + '/' + folder   # Trailing / means folder
 
-        # Create the folder
-        create_folder(full_path, root)
-
-        self.redirect('/?path=' + path)
+        if duplicated():
+            self.redirect('/?path=' + path + '&err=fdup')
+        else:
+            # Create the folder
+            create_folder(full_path, root)
+            self.redirect('/?path=' + path)
 
 class SignUp(BaseHandler):
 

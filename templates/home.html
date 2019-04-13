@@ -11,6 +11,13 @@
 
 </head>
 <body>
+  {% if errmsg %}
+    <script type="text/javascript">
+      alert('{{ errmsg }}');
+    </script>
+  {% endif %}
+
+
     <div class="top-bar">
         <div class="container">
             <div class="row d-flex align-items-center" style="margin-left: 100px">
@@ -175,6 +182,7 @@
     </div>
 
     <script type="text/javascript">
+
       function onCreate() {
         if ($('input[name=folder]').val() != '')
           document.forms[0].submit();
