@@ -43,9 +43,7 @@ def listFolders(path, userkey):
         if start != -1:
             sub = rpath[start + len(path) + 1:]
             if sub != '':
-                if sub.find('/') != -1:
-                    folders.append({'name': sub[:sub.rindex('/')], 'cdate': result.cdate})
-                else:
+                if sub.find('/') == -1:
                     folders.append({'name': sub, 'cdate': result.cdate})
 
     return folders
@@ -148,6 +146,7 @@ class Main(BaseHandler):
             full_path = root + '/' + path + '/' + folder   # Trailing / means folder
 
         # Create the folder
+    
         create_folder(full_path, root)
 
         self.redirect('/?path=' + path)
