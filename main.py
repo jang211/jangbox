@@ -10,8 +10,8 @@ from google.appengine.ext import blobstore
 from google.appengine.ext.webapp import blobstore_handlers
 from google.appengine.ext import ndb
 from models.user import User
-from models.file import File
 from models.folder import Folder
+from models.file import File
 
 my_default_retry_params = gcs.RetryParams(initial_delay = 0.2,
                                           max_delay = 5.0,
@@ -25,28 +25,41 @@ def create_folder(path, userkey):
     folder.user_id = userkey
     folder.path = path
     now = datetime.now()
-    folder.cdate = now.strftime("%m/%d/%Y, %H:%M:%S")
+    folder.cdate = now.strftime("%m/%d/%Y %H:%M:%S")
     folder.size = ""
     folder_key = folder.put()
 
-def listDirectory(path, userkey):
+def listFolders(path, userkey):
     paths = []
     qry = Folder.query(Folder.user_id == userkey)
     results = qry.fetch()
-    for result in results:
-        pathname = result.path
-        if pathname.find(path) is not -1:
-            paths.append(result)
+    # for result in results:
+    #     rpath = result.path
+    #     if start = rpath.find(path) != -1:
+    #         rpath[start + len(path) + 1:]
+    #
+    #
+    #     pathname = result.path
+    #     if pathname.find(path) is not -1:
+    #         paths.append(result)
 
     return paths
 
+def listFiles(path):
+    files = []
+    qry = Files.query(File.path == path)
+    results = qry.fetch()
+    # for result in results:
+
+
 class Test(webapp2.RequestHandler):
     def get(self):
-        qrye = Folder.query()
-        results = qrye.fetch()
-        for result in results:
-            self.response.write(result)
-            self.response.write('<br>')
+        # qrye = Folder.query()
+        # results = qrye.fetch()
+        # for result in results:
+        #     self.response.write(result)
+        name = blobstore.BlobInfo("AZ8xfWbbRKvMIiWCk6g9qw==")
+        self.response.write(name)
 
 class DelTest(webapp2.RequestHandler):
     def get(self):
@@ -81,37 +94,26 @@ class Main(BaseHandler):
         path = self.request.get('path')
 
         if (path == ''):
-            full_path =  '/' + bucket + '/' + root
+            full_path =  root
         else:
             full_path =  root + '/' + path
 
         # # List folder and files in the path
-        stats = listDirectory(full_path, root)
-        # self.response.write(stats)
+        folders = listFolders(full_path, root)
+
+        # self.response.write(folders)
 
         full_path_len = len(full_path)
 
         # Objects to list
         folderitems = []
-        fileitems = []
         if path != '':
             folderitems.append({'name': '..', 'size': '', 'cdate': ''});      # To show upper
 
-        for stat in stats:
-            x = stat.path[full_path_len:]
-            if x != '' and x.find('/') == -1:
-                size = stat.size
-                # ctime = time.strftime("%Y-%m-%d", time.gmtime(stat.st_ctime))
-                ctime = stat.cdate
-                fileitems.append({'name': x, 'size': size, 'cdate': ctime})
-            else:
-                if x != '' and x.find('/') != -1:
-                    size = stat.size
-                    # ctime = time.strftime("%Y-%m-%d", time.gmtime(stat.st_ctime))
-                    # ctime = stat.st_ctime
-                    size = stat.size
-                    ctime = stat.cdate
-                    folderitems.append({'name': x, 'size': size, 'cdate': ctime})
+        for folder in folders:
+            x = folder.path[full_path_len:]
+            cdate = folder.cdate
+            folderitems.append({'name': x, 'size': '', 'cdate': cdate})
 
         # For breadcrumb
         nodes = []
@@ -138,7 +140,7 @@ class Main(BaseHandler):
             'title': 'DropBox',
             'nodes': nodes,
             'folderitems': folderitems,
-            'fileitems' : fileitems,
+            'fileitems' : [],
             'path': path
         }
         path = os.path.join(os.path.dirname(__file__), "templates/home.html")
@@ -293,6 +295,8 @@ class Upload(blobstore_handlers.BlobstoreUploadHandler):
         fpath = self.request.POST.get('path')
         fname = upload.filename;
 
+        # Get file info from blobinfo
+
         file = File(
             name = fname,
             blob_key = upload.key())
@@ -300,6 +304,16 @@ class Upload(blobstore_handlers.BlobstoreUploadHandler):
 
         # self.response.write(upload.filename)
         # self.redirect('/download/%s/%s' % (upload.key(), path))
+
+class FileDownload(blobstore_handlers.BlobstoreDownloadHandler):
+    def get(self, file_key, file_name):
+        self.response.headers['Content-Type'] = 'application/x-gzip'
+        self.response.headers['Content-Disposition'] = 'attachment; filename=' + str(file_name)
+
+        if not blobstore.get(file_key):
+            self.error(404)
+        else:
+            self.send_blob(file_key)
 
 config = {}
 config['webapp2_extras.sessions'] = {
@@ -312,10 +326,11 @@ app = webapp2.WSGIApplication([
         ('/logout', Logout),
         ('/test', Test),
         ('/delTest', DelTest),
-        ('/download/([^/]+)?/([^/]+)?', FileDownload),
-        ('/uploadUrl', UploadURL),
         ('/delete', Delete),
+        ('/uploadUrl', UploadURL),
         ('/upload', Upload),
+        ('/download/([^/]+)?/([^/]+)?', FileDownload),
+
     ],
     debug=True,
     config=config)
