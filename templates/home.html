@@ -16,350 +16,318 @@
       alert('{{ errmsg }}');
     </script>
   {% endif %}
+  <div class="top-bar">
+      <div class="container">
+          <div class="row d-flex align-items-center" style="margin-left: 100px">
+              <div class="col-md-9 ">
+                  <h2>Awesome DropBox</h2>
+              </div>
+              <div class="col-md-3">
+                  <a href="/logout" class="btn btn-info" role="button">Logout</a>
+              </div>
+          </div>
+      </div>
+  </div>
 
+  <div class="col-md-12">
+    <div class="row" style="margin-top: 30px;">
+      <div class="col-md-6">
+          <div class="card border-info mb-3">
+              <div class="card-body card-size">
+                  <div class="card-title bc-icons-2">
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb blue-grey lighten-4 breadcrumb-fontsize">
+                          <i class="fa fa-folder" style="margin-right: 10px; margin-top: 8px"></i>
+                          {% if not nodes %}
+                            /
+                          {% endif %}
 
-    <div class="top-bar">
-        <div class="container">
-            <div class="row d-flex align-items-center" style="margin-left: 100px">
-                <div class="col-md-9 ">
-                    <h2>Awesome DropBox</h2>
-                </div>
-                <div class="col-md-3">
-                    <a href="/logout" class="btn btn-info" role="button">Logout</a>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="row" style="padding-top: 10px; padding-left: 3rem; padding-right: 3rem">
-        <div class="col-md-6">
-            <div class="card border-info mb-3">
-                <div class="card-body card-size">
-                    <div class="card-title bc-icons-2">
-                      <nav aria-label="breadcrumb">
-                          <ol class="breadcrumb blue-grey lighten-4 breadcrumb-fontsize">
+                          {% for node in nodes %}
+                              <li class="breadcrumb-item">
+                                <a class="black-text" href="/?path={{ node.route }}">{{ node.name }}</a>
+                                &nbsp;/&nbsp;
+                              </li>
+                          {% endfor %}
+                        </ol>
+                    </nav>
+                  </div>
+                  <div class="card-content" style="height: 30rem; overflow: scroll;">
+                    <table>
+                      {% for item in folderitems %}
+                        <tr>
+                        <td width="5%">
+                          {% if item.name != '..'%}
                             <i class="fa fa-folder" style="margin-right: 10px; margin-top: 8px"></i>
-                            {% if not nodes %}
-                              /
-                            {% endif %}
+                          {% else %}
+                            <i class="fas fa-undo-alt" style="margin-right: 10px; margin-top: 8px"></i>
+                          {% endif %}
+                        </td>
+                        <td width="30%">
+                          <a href="javascript:gotoSub('{{ item.name}}');"  class="">
+                            {{ item.name }}
+                          </a>
+                        </td>
+                        <td width="3%" class="right"></td>
+                        <td width="20%" class="right">{{ item.cdate }}</td>
+                        <td width="10%" class="right">
+                          {% if item.name != '..'%}
+                          <div class="dropdown">
+                            <button type="button" class="btn btn-secondary btn-sm dropdown-toggle-split" data-toggle="dropdown">
+                              ...
+                            </button>
+                            <div class="dropdown-menu">
+                              <a class="dropdown-item" href="javascript:delFolder('{{ item.name }}')">Delete</a>
+                            </div>
+                          </div>
+                          {% endif %}
+                        </td>
+                      </tr>
+                      {% endfor %}
 
-                            {% for node in nodes %}
-                                <li class="breadcrumb-item">
-                                  <a class="black-text" href="/?path={{ node.route }}">{{ node.name }}</a>
-                                  &nbsp;/&nbsp;
-                                </li>
-                            {% endfor %}
-                          </ol>
-                      </nav>
-                    </div>
-                    <div class="card-content">
-                      <table>
-                        {% for item in folderitems %}
-                          <tr>
-                          <td width="5%">
+                      {% for item in fileitems %}
+                        <tr>
+                          <td>
                             {% if item.name != '..'%}
-                              <i class="fa fa-folder" style="margin-right: 10px; margin-top: 8px"></i>
-                            {% else %}
-                              <i class="fas fa-undo-alt" style="margin-right: 10px; margin-top: 8px"></i>
+                              <i class="fa fa-file" style="margin-right: 10px; margin-top: 8px"></i>
                             {% endif %}
                           </td>
-                          <td width="30%">
-                            <a href="javascript:gotoSub('{{ item.name}}');"  class="">
+                          <td>
                               {{ item.name }}
-                            </a>
                           </td>
-                          <td width="3%" class="right"></td>
-                          <td width="20%" class="right">{{ item.cdate }}</td>
+                          <td class="right">{{ item.size }}KB</td>
+                          <td width="23%" class="right">{{ item.cdate }}</td>
                           <td width="10%" class="right">
-                            {% if item.name != '..'%}
                             <div class="dropdown">
-                              <button type="button" class="btn btn-secondary btn-sm dropdown-toggle-split" data-toggle="dropdown">
-                                ...
-                              </button>
-                              <div class="dropdown-menu">
-                                <a class="dropdown-item" href="javascript:delFolder('{{ item.name }}')">Delete</a>
-                              </div>
+                            <button type="button" class="btn btn-secondary btn-sm dropdown-toggle-split" data-toggle="dropdown">
+                              ...
+                            </button>
+                            <div class="dropdown-menu">
+                              <a class="dropdown-item" href="/download/{{ item.blob_key }}/{{ item.name }}" >Download</a>
+                              <a class="dropdown-item" href="javascript:delFile('{{ item.name }}')">Delete</a>
+                              <a class="dropdown-item" href="javascript:shareFile('{{ item.name }}')" data-target="#modalShare">Share</a>
                             </div>
-                            {% endif %}
+                          </div>
                           </td>
                         </tr>
-                        {% endfor %}
+                      {% endfor %}
+                    </table>
+                  </div>
+              </div>
 
-                        {% for item in fileitems %}
-                          <tr>
-                            <td>
-                              {% if item.name != '..'%}
-                                <i class="fa fa-file" style="margin-right: 10px; margin-top: 8px"></i>
-                              {% endif %}
-                            </td>
-                            <td>
-                                {{ item.name }}
-                            </td>
-                            <td class="right">{{ item.size }}KB</td>
-                            <td width="23%" class="right">{{ item.cdate }}</td>
-                            <td width="10%" class="right">
-                              <div class="dropdown">
-                              <button type="button" class="btn btn-secondary btn-sm dropdown-toggle-split" data-toggle="dropdown">
-                                ...
-                              </button>
-                              <div class="dropdown-menu">
-                                <a class="dropdown-item" href="/download/{{ item.blob_key }}/{{ item.name }}" >Download</a>
-                                <a class="dropdown-item" href="javascript:delFile('{{ item.name }}')">Delete</a>
-                                <a class="dropdown-item" href="javascript:shareFile('{{ item.name }}')" data-target="#modalShare">Share</a>
-                              </div>
-                            </div>
-                            </td>
-                          </tr>
-                        {% endfor %}
-                      </table>
-                    </div>
+              <div>
+
+              </div>
+              <div class="card-footer">
+                <button class="btn btn-outline-info col-sm-4 btn-padding" name="creatfolder"  data-toggle="modal" data-target="#modalCreate">New folder</button>
+                <button class="btn btn-outline-info col-sm-4 btn-padding" name="uploadfolder"  data-toggle="modal" data-target="#modalUpload">Upload file</button>
+              </div>
+
+              <!-- The Modal for Create -->
+              <div class="modal" id="modalCreate">
+                <div class="modal-dialog">
+                  <div class="modal-content">
+                    <form action="/" class="form" method="POST">
+                      <!-- Modal Header -->
+                      <div class="modal-header">
+                          <h4 class="modal-title">Create new folder</h4>
+                          <button type="button" class="close" data-dismiss="modal">&times;</button>
+                      </div>
+
+                      <!-- Modal body -->
+                      <div class="modal-body">
+                        <input type="hidden" name="path" value="{{ path }}">
+                        <input type="text" class="form-control" name="folder" placeholder="Folder name" required>
+                      </div>
+
+                      <!-- Modal footer -->
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-success" data-dismiss="modal" onclick="onCreate();">Create</button>
+                      </div>
+                    </form>
+                  </div>
                 </div>
+              </div>
 
-                <div>
-                  
-                </div>
-                <div class="card-footer">
-                  <button class="btn btn-outline-info col-sm-4 btn-padding" name="creatfolder"  data-toggle="modal" data-target="#modalCreate">New folder</button>
-                  <button class="btn btn-outline-info col-sm-4 btn-padding" name="uploadfolder"  data-toggle="modal" data-target="#modalUpload">Upload file</button>
-                </div>
+              <!-- The Modal for Upload -->
+              <div class="modal" id="modalUpload">
+                <div class="modal-dialog">
+                  <div class="modal-content">
 
-                <!-- The Modal for Create -->
-                <div class="modal" id="modalCreate">
-                  <div class="modal-dialog">
-                    <div class="modal-content">
-                      <form action="/" class="form" method="POST">
-                        <!-- Modal Header -->
-                        <div class="modal-header">
-                            <h4 class="modal-title">Create new folder</h4>
-                            <button type="button" class="close" data-dismiss="modal">&times;</button>
-                        </div>
+                    <form class="form" method="POST" action="{0}" enctype="multipart/form-data">
+                      <!-- Modal Header -->
+                      <div class="modal-header">
+                          <h4 class="modal-title">Upload a file</h4>
+                          <button type="button" class="close" data-dismiss="modal">&times;</button>
+                      </div>
 
-                        <!-- Modal body -->
-                        <div class="modal-body">
+                      <!-- Modal body -->
+                      <div class="modal-body">
                           <input type="hidden" name="path" value="{{ path }}">
-                          <input type="text" class="form-control" name="folder" placeholder="Folder name" required>
-                        </div>
-
-                        <!-- Modal footer -->
-                        <div class="modal-footer">
-                          <button type="button" class="btn btn-success" data-dismiss="modal" onclick="onCreate();">Create</button>
-                        </div>
-                      </form>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- The Modal for Upload -->
-                <div class="modal" id="modalUpload">
-                  <div class="modal-dialog">
-                    <div class="modal-content">
-
-                      <form class="form" method="POST" action="{0}" enctype="multipart/form-data">
-                        <!-- Modal Header -->
-                        <div class="modal-header">
-                            <h4 class="modal-title">Upload a file</h4>
-                            <button type="button" class="close" data-dismiss="modal">&times;</button>
-                        </div>
-
-                        <!-- Modal body -->
-                        <div class="modal-body">
-                            <input type="hidden" name="path" value="{{ path }}">
-                            <
-                              Upload File: <input type="file" name="file"><br>
-                        </div>
-
-                        <!-- Modal footer -->
-                        <div class="modal-footer">
-                          <button type="button" class="btn btn-success" data-dismiss="modal" onclick="onUpload();">Upload</button>
-                        </div>
-                      </form>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="modal" id="modalShare">
-                  <div class="modal-dialog">
-                    <div class="modal-content">
-
-                      <form class="form" method="POST" action="/sharefile" enctype="multipart/form-data">
-                        <!-- Modal Header -->
-                        <div class="modal-header">
-                            <h4 class="modal-title">Share a file</h4>
-                            <button type="button" class="close" data-dismiss="modal">&times;</button>
-                        </div>
-
-                        <!-- Modal body -->
-                        <div class="modal-body">
-                            <input type="hidden" name="path" value="{{ path }}">
-                            <input type="hidden" id="fname" name="filename" value="">
-                            <div>
-                              <label style="font-size: 1rem; color: green" width="40%">Share to:</label>
-                              <select width="60%" class="search-slt col-md-8" name="selectuser">
-                                  <option>Select User</option>
-                                  {% for item in useritems %}
-                                    <option>{{ item.email }}</option>
-                                  {% endfor %}
-                              </select>
-                            </div>
-                        </div>
-
-                        <!-- Modal footer -->
-                        <div class="modal-footer">
-                          <button type="button" class="btn btn-success" data-dismiss="modal" onclick="onShare();">Share</button>
-                        </div>
-                      </form>
-                    </div>
-                  </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6 sharecard-height">
-            <div class="card border-info mb-3">
-                <div class="card-body sharecard-height">
-                    <div class="card-title bc-icons-2">
-                        <h4 class="col-sm-8">Shared Files:</h4>
-                    </div>
-                    <div class="card-content">
-                      <div class="row">
-                        <div class="col-sm-8"></div>
-                        <label>Shared by another user</label>
+                          Upload File: <input type="file" name="file"><br>
                       </div>
-                      <table class="table" height="50%">
-                        <tr>
-                          <th>
-                          </th>
-                          <th>
-                            File name
-                          </th>
-                          <th>
-                            File size
-                          </th>
-                          <th>
-                            Data modified
-                          </th>
-                          <th>
-                            Shared by
-                          </th>
-                          <th>
-                            Tool
-                          </th>
-                        </tr>
-                        {% for item in sharedbyitems %}
-                          <tr>
-                            <td>
-                              {% if item.name != '..'%}
-                                <i class="fa fa-file" style="margin-right: 10px; margin-top: 8px"></i>
-                              {% endif %}
-                            </td>
-                            <td>
-                                {{ item.name }}
-                            </td>
-                            <td>{{ item.size }}KB</td>
-                            <td>{{ item.time }}</td>
-                            <td>{{ item.sh_by }}</td>
-                            <td>
-                              <div class="dropdown">
-                              <button type="button" class="btn btn-secondary btn-sm dropdown-toggle-split" data-toggle="dropdown">
-                                ...
-                              </button>
-                              <div class="dropdown-menu">
-                                <a class="dropdown-item" href="/download/{{ item.blob_key }}/{{ item.name }}" >Download</a>
-                              </div>
-                            </div>
-                            </td>
-                          </tr>
-                        {% endfor %}
-                      </table>
-                      <hr class="style13">
-                      <div class="row">
-                        <div class="col-sm-9"></div>
-                        <label>User shared</label>
+
+                      <!-- Modal footer -->
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-success" data-dismiss="modal" onclick="onUpload();">Upload</button>
                       </div>
-                      <table class="table" height="50%">
-                        <tr>
-                          <th>
-                          </th>
-                          <th>
-                            File name
-                          </th>
-                          <th>
-                            File path
-                          </th>
-                          <th>
-                            File size
-                          </th>
-                          <th>
-                            Data modified
-                          </th>
-                          <th>
-                            Shared to
-                          </th>
-                        </tr>
-                        {% for item in shareitems %}
-                          <tr>
-                            <td>
-                              {% if item.name != '..'%}
-                                <i class="fa fa-file" style="margin-right: 10px; margin-top: 8px"></i>
-                              {% endif %}
-                            </td>
-                            <td>
-                                {{ item.name }}
-                            </td>
-                            <td>
-                                root{{ item.path }}
-                            </td>
-                            <td>{{ item.size }}KB</td>
-                            <td>{{ item.time }}</td>
-                            <td>{{ item.sh_to }}</td>
-                            <td>
-                            </div>
-                            </td>
-                          </tr>
-                        {% endfor %}
-                      </table class="table">
-                      <br>
-                    </div>
-                </div>
-
-                <!-- The Modal for Share -->
-                <div class="modal" id="modalShare">
-                  <div class="modal-dialog">
-                    <div class="modal-content">
-
-                      <form class="form" method="POST" action="/sharefile" enctype="multipart/form-data">
-                        <!-- Modal Header -->
-                        <div class="modal-header">
-                            <h4 class="modal-title">Share a file</h4>
-                            <button type="button" class="close" data-dismiss="modal">&times;</button>
-                        </div>
-
-                        <!-- Modal body -->
-                        <div class="modal-body">
-                            <input type="hidden" name="path" value="{{ path }}">
-                            <input type="hidden" id="fname" name="filename" value="">
-                            <div>
-                              <label style="font-size: 1rem; color: green" width="40%">Share to:</label>
-                              <select width="60%" class="search-slt col-md-8" name="selectuser">
-                                  <option>Select User</option>
-                                  {% for item in useritems %}
-                                    <option>{{ item.email }}</option>
-                                  {% endfor %}
-                              </select>
-                            </div>
-                        </div>
-
-                        <!-- Modal footer -->
-                        <div class="modal-footer">
-                          <button type="button" class="btn btn-success" data-dismiss="modal" onclick="onShare();">Share</button>
-                        </div>
-                      </form>
-                    </div>
+                    </form>
                   </div>
                 </div>
-            </div>
+              </div>
+
+              <div class="modal" id="modalShare">
+                <div class="modal-dialog">
+                  <div class="modal-content">
+
+                    <form class="form" method="POST" action="/sharefile" enctype="multipart/form-data">
+                      <!-- Modal Header -->
+                      <div class="modal-header">
+                          <h4 class="modal-title">Share a file</h4>
+                          <button type="button" class="close" data-dismiss="modal">&times;</button>
+                      </div>
+
+                      <!-- Modal body -->
+                      <div class="modal-body">
+                          <input type="hidden" name="path" value="{{ path }}">
+                          <input type="hidden" id="fname" name="filename" value="">
+                          <div>
+                            <label style="font-size: 1rem; color: green" width="40%">Share to:</label>
+                            <select width="60%" class="search-slt col-md-8" name="selectuser">
+                                <option>Select User</option>
+                                {% for item in useritems %}
+                                  <option>{{ item.email }}</option>
+                                {% endfor %}
+                            </select>
+                          </div>
+                      </div>
+
+                      <!-- Modal footer -->
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-success" data-dismiss="modal" onclick="onShare();">Share</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+          </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card border-info mb-3">
+          <div class="card-header" style="height: 70px;"></div>
+          <div class="card-body card-size">
+              <div class="card-content">
+                <div>
+                  <span>Shared</span>
+                  <div style="height: 14rem; overflow:scroll;">
+                    <table class="table">
+                    {% for item in sharedbyitems %}
+                      <tr>
+                        <td>
+                          {% if item.name != '..'%}
+                            <i class="fa fa-file" style="margin-right: 10px; margin-top: 8px"></i>
+                          {% endif %}
+                        </td>
+                        <td>
+                            {{ item.name }}
+                        </td>
+                        <td>{{ item.size }}KB</td>
+                        <td>{{ item.sh_by }}</td>
+                        <td>
+                          <div class="dropdown">
+                          <button type="button" class="btn btn-secondary btn-sm dropdown-toggle-split" data-toggle="dropdown">
+                            ...
+                          </button>
+                          <div class="dropdown-menu">
+                            <a class="dropdown-item" href="/download/{{ item.blob_key }}/{{ item.name }}" >Download</a>
+                          </div>
+                        </div>
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </table>
+                  </div>
+                </div>
+                <hr class="style13">
+                <div>
+                  <span>My Shares</span>
+                  <div style="height: 14rem; overflow:scroll;">
+                    <table class="table">
+                    {% for item in shareitems %}
+                      <tr>
+                        <td>
+                          {% if item.name != '..'%}
+                            <i class="fa fa-file" style="margin-right: 10px; margin-top: 8px"></i>
+                          {% endif %}
+                        </td>
+                        <td>
+                            {{ item.name }}
+                        </td>
+                        <td>
+                            root{{ item.path }}
+                        </td>
+                        <td>{{ item.sh_to }}</td>
+                      </tr>
+                    {% endfor %}
+                    </table>
+                  </div>
+                </div>
+              </div>
+          </div>
         </div>
+
+              <!-- The Modal for Share -->
+              <div class="modal" id="modalShare">
+                <div class="modal-dialog">
+                  <div class="modal-content">
+
+                    <form class="form" method="POST" action="/sharefile" enctype="multipart/form-data">
+                      <!-- Modal Header -->
+                      <div class="modal-header">
+                          <h4 class="modal-title">Share a file</h4>
+                          <button type="button" class="close" data-dismiss="modal">&times;</button>
+                      </div>
+
+                      <!-- Modal body -->
+                      <div class="modal-body">
+                          <input type="hidden" name="path" value="{{ path }}">
+                          <input type="hidden" id="fname" name="filename" value="">
+                          <div>
+                            <label style="font-size: 1rem; color: green" width="40%">Share to:</label>
+                            <select width="60%" class="search-slt col-md-8" name="selectuser">
+                                <option>Select User</option>
+                                {% for item in useritems %}
+                                  <option>{{ item.email }}</option>
+                                {% endfor %}
+                            </select>
+                          </div>
+                      </div>
+
+                      <!-- Modal footer -->
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-success" data-dismiss="modal" onclick="onShare();">Share</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+          </div>
+      </div>
     </div>
+  </div>
 
-    <script type="text/javascript">
+  <div class="footer" style="background: lightgrey; height: 50px;">
+      <div class="container">
+          <div class="row d-flex align-items-center" style="margin-left: 100px">
+              <div class="col-md-9 ">
+
+              </div>
+              <div class="col-md-3">
+                <span style="display: inline-block; margin-top: 12px;"> Copyright © </span>
+              </div>
+          </div>
+      </div>
+  </div>
+  <script type="text/javascript">
 
       function onCreate() {
         if ($('input[name=folder]').val() != '')
@@ -383,7 +351,7 @@
           $('#modalShare').modal('toggle');
       }
 
-      // This is function called when press <share> button in modal 
+      // This is function called when press <share> button in modal
       function onShare() {
         document.forms[2].submit();
       }
