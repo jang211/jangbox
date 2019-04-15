@@ -3,7 +3,6 @@ from webapp2_extras import sessions
 import os
 import time
 from datetime import datetime
-import cloudstorage as gcs
 from google.appengine.ext.webapp import template
 from google.appengine.api import app_identity
 from google.appengine.ext import blobstore
@@ -14,12 +13,6 @@ from models.folder import Folder
 from models.file import File
 from models.shared import Shared
 
-my_default_retry_params = gcs.RetryParams(initial_delay = 0.2,
-                                          max_delay = 5.0,
-                                          backoff_factor = 2,
-                                          max_retry_period = 15)
-gcs.set_default_retry_params(my_default_retry_params)
-
 def duplicated(path):
     qry = Folder.query(Folder.path == path)
     result = qry.fetch()
@@ -28,7 +21,7 @@ def duplicated(path):
     else:
         return False
 
-       
+
 def create_folder(path, userkey):
     folder = Folder()
     folder.user_id = userkey
@@ -80,7 +73,7 @@ def listSharedbyFiles(userroot):
         if str(r.key.id()) == str(userroot):
             userself = r.email
             break
-    
+
     qry = Shared.query(Shared.sh_by != userself)
     results = qry.fetch()
     return results
@@ -93,7 +86,7 @@ def listShareFiles(userroot):
         if str(r.key.id()) == str(userroot):
             userself = r.email
             break
-    
+
     qry = Shared.query(Shared.sh_by == userself)
     results = qry.fetch()
     for result in results:
@@ -371,7 +364,7 @@ class Upload(BaseHandler):
         if len(result) > 0:
             result[0].key.delete()
             blobstore.delete(result[0].blob_key)
-            
+
             # Get file info from blobinfo
         file = File(
             name = fname,
@@ -402,7 +395,7 @@ class Sharefile(BaseHandler):
         userto = self.request.get('selectuser')
         filename = self.request.get('filename')
         path =  self.request.get('path')
-        
+
         if path == '':
             full_path = root
         else:
@@ -430,7 +423,7 @@ class Sharefile(BaseHandler):
         shared.time = results[0].cdate
         shared.put()
 
-        self.redirect('/?path=' + path)      
+        self.redirect('/?path=' + path)
 
 config = {}
 config['webapp2_extras.sessions'] = {
