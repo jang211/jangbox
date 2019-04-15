@@ -21,6 +21,13 @@ def duplicated(path):
     else:
         return False
 
+def dup_sharefile(path, name):
+    qry_share = Shared.query(Shared.path == path, Shared.name == name)
+    ress_share = qry_share.fetch()
+    if len(ress_share) > 0:
+        return True
+    else:
+        return False
 
 def create_folder(path, userkey):
     folder = Folder()
@@ -162,8 +169,12 @@ class Main(BaseHandler):
         # Find error messages
         error = self.request.get('err')
         errmsg = ''
-        if error == 'fdup':
+        if error == 'file_duplicate_err':
             errmsg = 'Folder already exists.'
+        elif error == 'share_duplicate_err':
+            errmsg = 'File already shared.'
+        elif error == 'user_select_err':
+            errmsg = 'User no selected for sharing.'
 
         # Show home template with parameters
         template_values = {
@@ -191,7 +202,7 @@ class Main(BaseHandler):
             full_path = root + '/' + path + '/' + folder
 
         if duplicated(full_path):
-            self.redirect('/?path=' + path + '&err=fdup')
+            self.redirect('/?path=' + path + '&err=file_duplicate_err')
         else:
             # Create the folder
             create_folder(full_path, root)
@@ -392,38 +403,43 @@ class Sharefile(BaseHandler):
     def post(self):
         root = self.session.get('root')
 
-        userto = self.request.get('selectuser')
-        filename = self.request.get('filename')
         path =  self.request.get('path')
+        userto = self.request.get('selectuser')
+        if userto == 'Select User':
+            self.redirect('/?path=' + path + '&err=user_select_err')
+        else:    
+            filename = self.request.get('filename')
+            
+            if path == '':
+                full_path = root
+            else:
+                full_path = root + '/' + path
 
-        if path == '':
-            full_path = root
-        else:
-            full_path = root + '/' + path
+            qry = User.query()
+            results = qry.fetch()
+            for result in results:
+                userkey = result.key.id()
+                if str(userkey) == str(root):
+                    share_by = result.email
 
-        qry = User.query()
-        results = qry.fetch()
-        for result in results:
-            userkey = result.key.id()
-            if str(userkey) == str(root):
-                share_by = result.email
+            # private duplicate sharefile
+            if dup_sharefile(full_path, filename):
+                self.redirect('/?path=' + path + '&err=share_duplicate_err')
+            else:
+                qry = File.query(File.path == full_path, File.name == filename)
+                results = qry.fetch()
 
-        # self.response.write(share_by)
+                shared = Shared()
+                shared.name = filename
+                shared.path = full_path
+                shared.blob_key = results[0].blob_key
+                shared.sh_by = share_by
+                shared.sh_to = userto
+                shared.size = results[0].size
+                shared.time = results[0].cdate
+                shared.put()
 
-        qry = File.query(File.path == full_path, File.name == filename)
-        results = qry.fetch()
-
-        shared = Shared()
-        shared.name = filename
-        shared.path = full_path
-        shared.blob_key = results[0].blob_key
-        shared.sh_by = share_by
-        shared.sh_to = userto
-        shared.size = results[0].size
-        shared.time = results[0].cdate
-        shared.put()
-
-        self.redirect('/?path=' + path)
+                self.redirect('/?path=' + path)
 
 config = {}
 config['webapp2_extras.sessions'] = {
