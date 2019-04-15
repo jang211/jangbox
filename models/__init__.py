@@ -1,1 +1,1 @@
-__all__ = ['user', 'folder']
+__all__ = ['user', 'folder', 'file', 'sharefile']

@@ -12,6 +12,7 @@ from google.appengine.ext import ndb
 from models.user import User
 from models.folder import Folder
 from models.file import File
+from models.shared import Shared
 
 my_default_retry_params = gcs.RetryParams(initial_delay = 0.2,
                                           max_delay = 5.0,
@@ -19,6 +20,15 @@ my_default_retry_params = gcs.RetryParams(initial_delay = 0.2,
                                           max_retry_period = 15)
 gcs.set_default_retry_params(my_default_retry_params)
 
+def duplicated(path):
+    qry = Folder.query(Folder.path == path)
+    result = qry.fetch()
+    if len(result) > 0:
+        return True
+    else:
+        return False
+
+       
 def create_folder(path, userkey):
     folder = Folder()
     folder.user_id = userkey
@@ -52,17 +62,43 @@ def listFiles(path):
     results = qry.fetch()
     return results
 
-class Test(webapp2.RequestHandler):
-    def get(self):
-        qrye = Folder.query(Folder.path < '200')
-        results = qrye.fetch()
-        for result in results:
-            self.response.write(result)
+def listUsers(userroot):
+    qry = User.query()
+    results = qry.fetch()
+    userlist = []
+    for result in results:
+        userkey = result.key.id()
+        if str(userkey) != str(userroot):
+            userlist.append(result)
+    return userlist
 
-class DelTest(webapp2.RequestHandler):
-    def get(self):
-        folder = Folder()
-        folder.key.delete()
+def listSharedbyFiles(userroot):
+    qry = User.query()
+    res = qry.fetch()
+    userself = ''
+    for r in res:
+        if str(r.key.id()) == str(userroot):
+            userself = r.email
+            break
+    
+    qry = Shared.query(Shared.sh_by != userself)
+    results = qry.fetch()
+    return results
+
+def listShareFiles(userroot):
+    qry = User.query()
+    res = qry.fetch()
+    userself = ''
+    for r in res:
+        if str(r.key.id()) == str(userroot):
+            userself = r.email
+            break
+    
+    qry = Shared.query(Shared.sh_by == userself)
+    results = qry.fetch()
+    for result in results:
+        result.path = result.path[len(userroot):]
+    return results
 
 class BaseHandler(blobstore_handlers.BlobstoreUploadHandler, webapp2.RequestHandler):
     def dispatch(self):                                 # override dispatch
@@ -102,6 +138,16 @@ class Main(BaseHandler):
         # # List files in this folder
         files = listFiles(full_path)
 
+        # List users
+        users = listUsers(root)
+
+        # List shared files
+        sharedbyfiles = listSharedbyFiles(root)
+
+        # List share files
+        sharefiles = listShareFiles(root)
+
+
         # For breadcrumb
         nodes = []
         if path != '':
@@ -128,10 +174,13 @@ class Main(BaseHandler):
 
         # Show home template with parameters
         template_values = {
-            'title': 'DropBox',
+            'title': 'DropBox Application | Home',
             'nodes': nodes,
             'folderitems': folders,
             'fileitems' : files,
+            'useritems' : users,
+            'sharedbyitems' : sharedbyfiles,
+            'shareitems' : sharefiles,
             'path': path,
             'errmsg': errmsg
         }
@@ -196,14 +245,11 @@ class SignUp(BaseHandler):
 
 				user_key = user.put()
 
-				# Create root object for user
-
-				# self.createUserRoot(str(user_key.id()))
-
 				# Put session variable user as user's key
 				self.session['root'] = str(user_key.id())
 
                 folder = Folder()
+
                 folder.user_id = str(user_key.id())
                 folder.path = str(user_key.id())
                 folder_key = folder.put()
@@ -273,19 +319,27 @@ class DelFolder(BaseHandler):
         self.redirect('/?path=' + red_path)
 
 class DelFile(BaseHandler):
-    def get(self, fpath, fname):
+    def post(self):
         root = self.session.get('root')
-        full_path = root + '/' + fpath
+        file = self.request.get('file')
+        file = file.split(',')
+        full_path = root + '/' + file[0]
+        filename = file[1]
 
-        # Delete from datastore
-        qry = File.query(File.path == full_path, File.name == fname)
+        # Delete from file model
+        qry = File.query(File.path == full_path, File.name == filename)
+        res = qry.fetch()
+        res[0].key.delete()
+
+        # if file is shared, delete it from sharefile model
+        qry = Shared.query(Shared.path == full_path, Shared.name == filename)
         res = qry.fetch()
         res[0].key.delete()
 
         # Delete from blobstore
         blobstore.delete(res[0].blob_key)
 
-        self.redirect('/?path=' + fpath)
+        self.redirect('/?path=' + file[0])
 
 
 class UploadURL(webapp2.RequestHandler):
@@ -305,11 +359,20 @@ class Upload(BaseHandler):
             fpath = root + '/' + path
         else:
             fpath = root
-        fname = upload.filename;
-        fsize = blobstore.BlobInfo(upload.key()).size
-        fdate = blobstore.BlobInfo(upload.key()).creation
-        # Get file info from blobinfo
 
+        fname = upload.filename;
+        fsize = round(blobstore.BlobInfo(upload.key()).size/1000, 2)
+        if fsize < 1:
+            fsize = 1
+        fdate = blobstore.BlobInfo(upload.key()).creation
+
+        qry = File.query(File.path == fpath, File.name == fname)
+        result = qry.fetch()
+        if len(result) > 0:
+            result[0].key.delete()
+            blobstore.delete(result[0].blob_key)
+            
+            # Get file info from blobinfo
         file = File(
             name = fname,
             path = fpath,
@@ -332,6 +395,43 @@ class FileDownload(blobstore_handlers.BlobstoreDownloadHandler):
         else:
             self.send_blob(file_key)
 
+class Sharefile(BaseHandler):
+    def post(self):
+        root = self.session.get('root')
+
+        userto = self.request.get('selectuser')
+        filename = self.request.get('filename')
+        path =  self.request.get('path')
+        
+        if path == '':
+            full_path = root
+        else:
+            full_path = root + '/' + path
+
+        qry = User.query()
+        results = qry.fetch()
+        for result in results:
+            userkey = result.key.id()
+            if str(userkey) == str(root):
+                share_by = result.email
+
+        # self.response.write(share_by)
+
+        qry = File.query(File.path == full_path, File.name == filename)
+        results = qry.fetch()
+
+        shared = Shared()
+        shared.name = filename
+        shared.path = full_path
+        shared.blob_key = results[0].blob_key
+        shared.sh_by = share_by
+        shared.sh_to = userto
+        shared.size = results[0].size
+        shared.time = results[0].cdate
+        shared.put()
+
+        self.redirect('/?path=' + path)      
+
 config = {}
 config['webapp2_extras.sessions'] = {
     'secret_key': 'my_secret_key',
@@ -341,13 +441,12 @@ app = webapp2.WSGIApplication([
         ('/signup', SignUp),
         ('/login', Login),
         ('/logout', Logout),
-        ('/test', Test),
         ('/del_folder', DelFolder),
-        ('/del_file/([^/]+)?/([^/]+)?', DelFile),
+        ('/del_file', DelFile),
         ('/uploadUrl', UploadURL),
         ('/upload', Upload),
         ('/download/([^/]+)?/([^/]+)?', FileDownload),
-
+        ('/sharefile', Sharefile),
     ],
     debug=True,
     config=config)
